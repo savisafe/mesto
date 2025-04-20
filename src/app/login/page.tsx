@@ -2,24 +2,38 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {supabase} from "../../../supabaseClient";
-import Link from "next/link";
+import { supabase } from '../../../supabaseClient';
+import {routes} from "@/routes/routes";
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
     const router = useRouter();
 
     const handleLogin = async () => {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        console.log('Login data:', data);
-        if (error) {
-            setError(error.message);
-        } else {
-            setError(null);
-            router.push('/dashboard');
+        setLoading(true);
+        setError(null);
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                setError(error.message);
+            } else {
+                document.cookie = `access_token=${data.session?.access_token}; path=/; max-age=3600;`;
+                document.cookie = `role=${data.user?.user_metadata.role}; path=/; max-age=3600;`;
+                router.push('/dashboard');
+            }
         }
+        catch (err) {
+            setError((err as Error).message);
+        }
+        setLoading(false);
     };
 
     return (
@@ -28,6 +42,7 @@ export default function LoginPage() {
                 <h2 className="text-3xl font-bold text-white mb-6 text-center">
                     Вход в систему
                 </h2>
+
                 <input
                     type="email"
                     value={email}
@@ -45,17 +60,19 @@ export default function LoginPage() {
 
                 {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
 
-                <Link href="/dashboard">
-                    <button
-                        onClick={handleLogin}
-                        className="w-full cursor-pointer py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition"
-                    >
-                        Войти
-                    </button>
-                </Link>
+                <button
+                    onClick={handleLogin}
+                    disabled={loading}
+                    className="w-full py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
+                >
+                    {loading ? 'Входим...' : 'Войти'}
+                </button>
 
                 <p className="mt-6 text-purple-400 text-sm text-center">
-                    Нет аккаунта? <Link href="/registration" className="underline hover:text-purple-300">Зарегистрируйтесь</Link>
+                    Нет аккаунта?{' '}
+                    <a href={routes.REGISTRATION} className="underline hover:text-purple-300">
+                        Зарегистрируйтесь
+                    </a>
                 </p>
             </div>
         </div>

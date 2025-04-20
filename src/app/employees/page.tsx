@@ -4,6 +4,12 @@
 import { useState, Fragment, ChangeEvent, FormEvent } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 
+interface Appointment {
+    id: number;
+    time: string;
+    client: string;
+}
+
 interface Employee {
     id: number;
     name: string;
@@ -13,43 +19,55 @@ interface Employee {
     role: 'Мастер' | 'Админ';
     revenue: number;
     schedule: string;
+    appointments: Appointment[];
 }
-interface Appointment { time: string; client: string; }
 
-// Пример данных
 const initialEmployees: Employee[] = [
     {
-        id: 1, name: 'Дарья', role: 'Мастер', branch: 'Филиал 1',
-        phone: '',
-        position: '',
-        revenue: 0,
-        schedule: ''
+        id: 1,
+        name: 'Дарья',
+        phone: '+77770000000',
+        position: 'Бровист',
+        branch: 'Филиал 1',
+        role: 'Мастер',
+        revenue: 45000,
+        schedule: '10:00 - 18:00',
+        appointments: [
+            { id: 101, time: '09:00–09:30', client: 'Анна' },
+            { id: 102, time: '11:00–12:00', client: 'Мария' }
+        ],
     },
     {
-        id: 2, name: 'Виктория', role: 'Мастер', branch: 'Филиал 2',
-        phone: '',
-        position: '',
-        revenue: 0,
-        schedule: ''
+        id: 2,
+        name: 'Виктория',
+        phone: '+77771112233',
+        position: 'Лешмейкер',
+        branch: 'Филиал 2',
+        role: 'Мастер',
+        revenue: 39000,
+        schedule: '12:00 - 20:00',
+        appointments: [
+            { id: 201, time: '10:00–11:00', client: 'Ольга' }
+        ],
     },
     {
-        id: 3, name: 'Елена', role: 'Админ', branch: 'Филиал 1',
-        phone: '',
-        position: '',
+        id: 3,
+        name: 'Елена',
+        phone: '+77772223344',
+        position: 'Администратор',
+        branch: 'Филиал 1',
+        role: 'Админ',
         revenue: 0,
-        schedule: ''
+        schedule: '09:00 - 17:00',
+        appointments: [],
     }
 ];
-const appointments: Record<number, Appointment[]> = {
-    1: [ { time: '09:00–09:30', client: 'Анна' }, { time: '11:00–12:00', client: 'Мария' } ],
-    2: [ { time: '10:00–11:00', client: 'Ольга' } ],
-    3: []
-};
 
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
 
-    // Модалка добавления сотрудника
     const [isOpen, setIsOpen] = useState(false);
     const [newEmp, setNewEmp] = useState<{
         name: string;
@@ -78,7 +96,8 @@ export default function EmployeesPage() {
                 position: '',
                 revenue: 0,
                 schedule: '',
-            } as Employee
+                appointments: [],
+            }
         ]);
         setNewEmp({ name: '', role: 'Мастер', branch: '' });
         closeModal();
@@ -92,36 +111,72 @@ export default function EmployeesPage() {
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>
-                <button onClick={openModal} className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl">
+                <button
+                    onClick={openModal}
+                    className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl"
+                >
                     + Добавить сотрудника
                 </button>
             </div>
-            <div className="flex space-x-6 overflow-x-auto pb-4">
-                {employees.map(emp => (
-                    <div key={emp.id} className="flex-shrink-0 w-64 bg-purple-800 bg-opacity-30 border border-purple-700 p-4 rounded-xl">
-                        <div className="flex justify-between items-center mb-2">
-                            <h2 className="text-xl font-semibold">{emp.name}</h2>
-                            <button onClick={() => handleDelete(emp.id)} className="text-red-500 hover:text-red-400">✕</button>
-                        </div>
-                        <p className="text-sm text-purple-300 mb-1">Роль: {emp.role}</p>
-                        <p className="text-sm text-purple-300 mb-2">Филиал: {emp.branch}</p>
-                        <h3 className="text-lg font-medium mb-1">День сотрудника</h3>
-                        {appointments[emp.id]?.length ? (
-                            <ul className="space-y-1 text-sm">
-                                {appointments[emp.id].map((a, i) => (
-                                    <li key={i}>• {a.time} — {a.client}</li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-sm text-purple-400">Нет записей на сегодня</p>
-                        )}
-                    </div>
-                ))}
-                {/* Карточка для добавления нового виджета */}
-                {/* ...если нужна, можно сюда добавить */}
+
+            {/* Поиск и фильтрация */}
+            <div className="mb-6 flex flex-wrap items-center gap-4">
+                <input
+                    type="text"
+                    placeholder="Поиск по имени..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="px-4 py-2 rounded bg-purple-800 text-white placeholder-purple-400"
+                />
+                <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value as 'all' | 'Мастер' | 'Админ')}
+                    className="px-4 py-2 rounded bg-purple-800 text-white"
+                >
+                    <option value="all">Все роли</option>
+                    <option value="Мастер">Мастер</option>
+                    <option value="Админ">Админ</option>
+                </select>
             </div>
 
-            {/* Модалка */}
+            {/* Карточки сотрудников */}
+            <div className="flex space-x-6 overflow-x-auto pb-4">
+                {employees
+                    .filter(emp =>
+                        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                        (roleFilter === 'all' || emp.role === roleFilter)
+                    )
+                    .map(emp => (
+                        <div
+                            key={emp.id}
+                            className="flex-shrink-0 w-64 bg-purple-800 bg-opacity-30 border border-purple-700 p-4 rounded-xl"
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <h2 className="text-xl font-semibold">{emp.name}</h2>
+                                <button
+                                    onClick={() => handleDelete(emp.id)}
+                                    className="text-red-500 hover:text-red-400"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <p className="text-sm text-purple-300 mb-1">Роль: {emp.role}</p>
+                            <p className="text-sm text-purple-300 mb-2">Филиал: {emp.branch}</p>
+                            <h3 className="text-lg font-medium mb-1">День сотрудника</h3>
+                            {emp.appointments.length > 0 ? (
+                                <ul className="space-y-1 text-sm">
+                                    {emp.appointments.map(a => (
+                                        <li key={a.id}>• {a.time} — {a.client}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-sm text-purple-400">Нет записей на сегодня</p>
+                            )}
+                        </div>
+                    ))}
+            </div>
+
+            {/* Модалка добавления */}
             <Transition appear show={isOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-50" onClose={closeModal}>
                     <Transition.Child

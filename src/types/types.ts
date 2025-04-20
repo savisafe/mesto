@@ -1,0 +1,1 @@
+export type roles = 'admin' | 'client' | 'master' | 'manager' | 'employee' | 'superuser'; // TODO расписать каждую роль

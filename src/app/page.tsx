@@ -1,9 +1,7 @@
-// src/app/page.tsx
 'use client';
 
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 
 export default function Home() {
   const [form, setForm] = useState({ name: '', phone: '' });
@@ -16,12 +14,6 @@ export default function Home() {
 
   return (
       <div className="space-y-32">
-        <Link href="/login">
-          <button className="w-full cursor-pointer py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition">
-            Войти
-          </button>
-        </Link>
-
         {/* 1. Hero */}
         <section className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-purple-950 to-black text-white text-center px-4">
           <motion.h1
