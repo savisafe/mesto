@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../supabaseClient';
 import {routes} from "@/routes/routes";
+import {useAuth} from "@/context/AuthContext";
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -12,6 +13,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     const router = useRouter();
+    const { setAccessToken } = useAuth();
 
     const handleLogin = async () => {
         setLoading(true);
@@ -25,8 +27,7 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message);
             } else {
-                document.cookie = `access_token=${data.session?.access_token}; path=/; max-age=3600;`;
-                document.cookie = `role=${data.user?.user_metadata.role}; path=/; max-age=3600;`;
+                setAccessToken(data.session.access_token);
                 router.push('/dashboard');
             }
         }

@@ -15,6 +15,8 @@ import {
     ArcElement
 } from 'chart.js';
 import { Line, Bar, Pie } from 'react-chartjs-2';
+import {useProtectedRoute} from "@/hooks/useProtectedRoute";
+import {roles} from "@/types/types";
 
 // Регистрация компонентов Chart.js
 ChartJS.register(

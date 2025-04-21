@@ -1,22 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import {useState} from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import {Menu, X} from 'lucide-react';
+import {AnimatePresence, motion} from 'framer-motion';
+import {useAuth} from "@/context/AuthContext";
+import {supabase} from "../../../supabaseClient";
+import {routes} from "@/routes/routes";
+import {redirect} from "next/navigation";
 
 const navLinks = [
-    { href: '/dashboard', label: 'Дашборд' },
-    { href: '/calendar', label: 'Календарь' },
-    { href: '/clients', label: 'Клиенты' },
-    { href: '/employees', label: 'Сотрудники' },
-    { href: '/finance', label: 'Финансы' },
-    { href: '/reviews', label: 'Отзывы' },
-    { href: '/settings', label: 'Настройки' },
+    {href: '/dashboard', label: 'Дашборд'},
+    {href: '/calendar', label: 'Календарь'},
+    {href: '/clients', label: 'Клиенты'},
+    {href: '/employees', label: 'Сотрудники'},
+    {href: '/finance', label: 'Финансы'},
+    {href: '/reviews', label: 'Отзывы'},
+    {href: '/settings', label: 'Настройки'},
 ];
 
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);
+    const { accessToken, setAccessToken } = useAuth();
+
+    const logout = async () => {
+        await supabase.auth.signOut();
+        setAccessToken(null);
+        redirect(routes.HOME)
+    };
 
     return (
         <header className="w-full bg-purple-900 bg-opacity-30 border-b border-purple-800 px-6 py-4 relative z-50">
@@ -34,10 +45,16 @@ export function Header() {
                     ))}
                 </nav>
 
-                {/* Desktop profile */}
-                <div className="sm:[display:none] md:block text-sm text-purple-300">
-                    👤 Дарья | <button className="hover:text-white">Выйти</button>
-                </div>
+                {accessToken
+                    ? (
+                        <div className="sm:[display:none] md:block text-sm text-purple-300">
+                            👤 Дарья | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                        </div>
+                    )
+                    : (
+                        <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
+                    )
+                }
 
                 {/* Burger */}
                 <button
@@ -45,7 +62,7 @@ export function Header() {
                     onClick={() => setIsOpen(prev => !prev)}
                     aria-label="Меню"
                 >
-                    {isOpen ? <X size={28} /> : <Menu size={28} />}
+                    {isOpen ? <X size={28}/> : <Menu size={28}/>}
                 </button>
             </div>
 
@@ -53,10 +70,10 @@ export function Header() {
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                        transition={{ duration: 0.25 }}
+                        initial={{opacity: 0, scale: 0.95, y: -10}}
+                        animate={{opacity: 1, scale: 1, y: 0}}
+                        exit={{opacity: 0, scale: 0.95, y: -10}}
+                        transition={{duration: 0.25}}
                         className="md:hidden absolute top-full left-0 w-full bg-purple-950 bg-opacity-90 backdrop-blur border-t border-purple-800 p-6 space-y-4"
                     >
                         {navLinks.map(link => (
@@ -69,9 +86,16 @@ export function Header() {
                                 {link.label}
                             </Link>
                         ))}
-                        <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
-                            👤 Дарья | <button className="hover:text-white">Выйти</button>
-                        </div>
+                        {accessToken
+                            ? (
+                                <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
+                                    👤 Дарья | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                                </div>
+                            )
+                            : (
+                                <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
+                            )
+                        }
                     </motion.div>
                 )}
             </AnimatePresence>

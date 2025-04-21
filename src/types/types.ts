@@ -1,1 +1,8 @@
-export type roles = 'admin' | 'client' | 'master' | 'manager' | 'employee' | 'superuser'; // TODO расписать каждую роль
+export type Role = 'admin' | 'manager' | 'master' | 'client';
+
+export const roles: Record<Role, Role> = {
+    admin: 'admin',
+    manager: 'manager',
+    master: 'master',
+    client: 'client'
+};
