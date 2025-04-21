@@ -5,9 +5,13 @@ import Link from "next/link";
 import {supabase} from "../../../supabaseClient";
 import {useRouter} from "next/navigation";
 import {routes} from "@/routes/routes";
+import {motion} from 'framer-motion';
+import {Button} from "@/ui/button/Button";
+import {Input} from "@/ui/input/Input";
 
 export default function RegistrationPage() {
     const router = useRouter();
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,15 +23,22 @@ export default function RegistrationPage() {
             setLoading(true);
             setError(null);
             try {
-                const { data, error } = await supabase.auth.signUp({
+                const {data, error} = await supabase.auth.signUp({
                     email,
                     password,
-                    options: { data: { role: 'admin' } },
+                    options: {
+                        emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD,
+                        data: {
+                            name: name,
+                            role: 'admin'
+                        }
+                    },
                 });
                 if (error) {
                     setError(error.message);
                 } else {
                     console.log(data)
+                    alert('Проверьте почту для подтверждения регистрации');
                     router.push('/login');
                 }
             } catch (err) {
@@ -42,48 +53,78 @@ export default function RegistrationPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-950 to-black flex items-center justify-center px-4">
-            <div
-                className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700">
-                <h2 className="text-3xl font-bold text-white mb-6 text-center">
+            <motion.div
+                className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700"
+                initial={{opacity: 0, y: 40}}
+                animate={{opacity: 1, y: 0}}
+                transition={{duration: 0.6, ease: 'easeOut'}}>
+                <motion.h2
+                    className="text-3xl font-bold text-white mb-6 text-center"
+                    initial={{opacity: 0, y: -20}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{delay: 0.2}}>
                     Регистрация
-                </h2>
-                <input
+                </motion.h2>
+
+                <Input
+                    type="text"
+                    placeholder="Имя"
+                    value={name}
+                    setValue={setName}
+                    transitionDelay={0.25}
+                />
+
+                <Input
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email"
-                    className="w-full px-4 py-3 mb-4 bg-purple-800 text-white placeholder-purple-300 rounded-xl border border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={email}
+                    setValue={setEmail}
+                    transitionDelay={0.3}
                 />
-                <input
+
+                <Input
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Пароль"
-                    className="w-full px-4 py-3 mb-4 bg-purple-800 text-white placeholder-purple-300 rounded-xl border border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={password}
+                    setValue={setPassword}
+                    showButton={true}
+                    transitionDelay={0.35}
                 />
 
-                <input
+                <Input
                     type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Повторите пароль"
-                    className="w-full px-4 py-3 mb-4 bg-purple-800 text-white placeholder-purple-300 rounded-xl border border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={confirmPassword}
+                    setValue={setConfirmPassword}
+                    showButton={true}
+                    transitionDelay={0.4}
                 />
 
-                {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+                {error &&
+                    <motion.p
+                        className="text-red-400 text-sm mb-4 text-center"
+                        initial={{opacity: 0}}
+                        animate={{opacity: 1}}
+                        transition={{delay: 0.45}}
+                    >
+                        {error}
+                    </motion.p>}
 
-                <button
+                <Button
                     onClick={handleRegistration}
-                    className="w-full cursor-pointer py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition"
-                    disabled={loading}
-                >
-                    {loading ? 'Регистрация...' : 'Зарегистрироваться'}
-                </button>
+                    loading={loading}
+                    text="Зарегистрироваться"
+                    transitionDelay={0.5}
+                />
 
-                <p className="mt-6 text-purple-400 text-sm text-center">
+                <motion.p
+                    className="mt-6 text-purple-400 text-sm text-center"
+                    initial={{opacity: 0}}
+                    animate={{opacity: 1}}
+                    transition={{delay: 0.6}}>
                     Есть аккаунт? <Link href={routes.LOGIN} className="underline hover:text-purple-300">войдите</Link>
-                </p>
-            </div>
+                </motion.p>
+            </motion.div>
         </div>
     );
 }

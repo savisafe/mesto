@@ -1,6 +1,7 @@
 export const routes = {
     HOME: '/',
     LOGIN: '/login',
+    RECOVERY: '/recovery',
     DASHBOARD: '/dashboard',
     CALENDAR: '/calendar',
     REGISTRATION: '/registration',

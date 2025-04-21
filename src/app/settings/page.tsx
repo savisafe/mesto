@@ -1,11 +1,8 @@
-// src/app/settings/page.tsx
 'use client';
 
 import { useState, ChangeEvent, FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
-import {useProtectedRoute} from "@/hooks/useProtectedRoute";
-import {roles} from "@/types/types";
 
 interface Integration { name: string; url: string; }
 

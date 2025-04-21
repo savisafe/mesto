@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import dayjs from 'dayjs';
-import {useProtectedRoute} from "@/hooks/useProtectedRoute";
-import {roles} from "@/types/types";
 
 const availableDates = ['2025-04-22', '2025-04-25', '2025-04-27', '2025-04-28', '2025-04-30'];
 

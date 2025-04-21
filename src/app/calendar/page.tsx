@@ -4,8 +4,6 @@ import dayjs, { Dayjs } from 'dayjs';
 import { useState, Fragment } from 'react';
 import clsx from 'clsx';
 import { Dialog, Transition } from '@headlessui/react';
-import {useProtectedRoute} from "@/hooks/useProtectedRoute";
-import {roles} from "@/types/types";
 
 interface Appointment {
     time: string;

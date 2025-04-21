@@ -1,10 +1,7 @@
-// src/app/reviews/page.tsx
 'use client';
 
 import { useState, Fragment, ChangeEvent, FormEvent } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import {useProtectedRoute} from "@/hooks/useProtectedRoute";
-import {roles} from "@/types/types";
 
 interface VisitRef { client: string; employee: string; date: string; }
 interface Review { date: string; rating: number; comment: string; visit: VisitRef; }

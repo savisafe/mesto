@@ -9,7 +9,7 @@ import {supabase} from "../../../supabaseClient";
 import {routes} from "@/routes/routes";
 import {redirect} from "next/navigation";
 
-const navLinks = [
+const protectedLinks = [
     {href: '/dashboard', label: 'Дашборд'},
     {href: '/calendar', label: 'Календарь'},
     {href: '/clients', label: 'Клиенты'},
@@ -19,9 +19,18 @@ const navLinks = [
     {href: '/settings', label: 'Настройки'},
 ];
 
+const publicLinks = [
+    {href: '/', label: 'Главная'},
+    {href: '/about', label: 'О нас'}, // опционально
+    {href: '/features', label: 'Возможности'}, // опционально
+    {href: '/contact', label: 'Контакты'}, // опционально
+];
+
+
 export function Header() {
     const [isOpen, setIsOpen] = useState(false);
     const { accessToken, setAccessToken } = useAuth();
+    const navLinks = accessToken ? protectedLinks : publicLinks;
 
     const logout = async () => {
         await supabase.auth.signOut();

@@ -1,25 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../../../supabaseClient';
-import {routes} from "@/routes/routes";
-import {useAuth} from "@/context/AuthContext";
+import {useState} from 'react';
+import {useRouter} from 'next/navigation';
+import {supabase} from '../../../supabaseClient';
+import {routes} from '@/routes/routes';
+import {useAuth} from '@/context/AuthContext';
+import {motion} from 'framer-motion';
+import {Input} from "@/ui/input/Input";
+import {Button} from "@/ui/button/Button";
 
 export default function LoginPage() {
+    const router = useRouter();
+    const {setAccessToken} = useAuth();
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const router = useRouter();
-    const { setAccessToken } = useAuth();
-
     const handleLogin = async () => {
         setLoading(true);
         setError(null);
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const {data, error} = await supabase.auth.signInWithPassword({
                 email,
                 password
             });
@@ -30,8 +33,7 @@ export default function LoginPage() {
                 setAccessToken(data.session.access_token);
                 router.push('/dashboard');
             }
-        }
-        catch (err) {
+        } catch (err) {
             setError((err as Error).message);
         }
         setLoading(false);
@@ -39,43 +41,70 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-purple-950 to-black flex items-center justify-center px-4">
-            <div className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700">
-                <h2 className="text-3xl font-bold text-white mb-6 text-center">
-                    Вход в систему
-                </h2>
-
-                <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    className="w-full px-4 py-3 mb-4 bg-purple-800 text-white placeholder-purple-300 rounded-xl border border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Пароль"
-                    className="w-full px-4 py-3 mb-4 bg-purple-800 text-white placeholder-purple-300 rounded-xl border border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-
-                {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
-
-                <button
-                    onClick={handleLogin}
-                    disabled={loading}
-                    className="w-full py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
+            <motion.div
+                className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700"
+                initial={{opacity: 0, y: 40}}
+                animate={{opacity: 1, y: 0}}
+                transition={{duration: 0.6, ease: 'easeOut'}}
+            >
+                <motion.h2
+                    className="text-3xl font-bold text-white mb-6 text-center"
+                    initial={{opacity: 0, y: -20}}
+                    animate={{opacity: 1, y: 0}}
+                    transition={{delay: 0.2}}
                 >
-                    {loading ? 'Входим...' : 'Войти'}
-                </button>
+                    Вход в систему
+                </motion.h2>
 
-                <p className="mt-6 text-purple-400 text-sm text-center">
-                    Нет аккаунта?{' '}
-                    <a href={routes.REGISTRATION} className="underline hover:text-purple-300">
-                        Зарегистрируйтесь
+                <Input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    setValue={setEmail}
+                    transitionDelay={0.3}
+                />
+
+                <Input
+                    type="password"
+                    placeholder="Пароль"
+                    value={password}
+                    setValue={setPassword}
+                    showButton={true}
+                    transitionDelay={0.4}
+                />
+
+                {error && (
+                    <motion.p
+                        className="text-red-400 text-sm mb-4 text-center"
+                        initial={{opacity: 0}}
+                        animate={{opacity: 1}}
+                        transition={{delay: 0.45}}
+                    >
+                        {error}
+                    </motion.p>
+                )}
+
+                <Button
+                    onClick={handleLogin}
+                    loading={loading}
+                    text="Войти"
+                    transitionDelay={0.5}
+                />
+
+                <motion.div
+                    className="flex justify-between items-center mt-4 text-sm text-purple-400"
+                    initial={{opacity: 0}}
+                    animate={{opacity: 1}}
+                    transition={{delay: 0.55}}
+                >
+                    <a href={routes.RECOVERY} className="underline hover:text-purple-300">
+                        Забыли пароль?
                     </a>
-                </p>
-            </div>
+                    <a href={routes.REGISTRATION} className="underline hover:text-purple-300">
+                        Регистрация
+                    </a>
+                </motion.div>
+            </motion.div>
         </div>
     );
 }

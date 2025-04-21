@@ -1,11 +1,10 @@
-// src/app/dashboard/page.tsx
-'use client';
+ 'use client';
 
 import {JSX, useState} from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import {useProtectedRoute} from "@/hooks/useProtectedRoute";
-import {roles} from "@/types/types";
+import {useAuth} from "@/context/AuthContext";
+
 
 interface RecordEntry { time: string; client: string; master: string; }
 interface EmployeeStatus { name: string; label: string; }
@@ -20,8 +19,7 @@ interface WidgetConfig {
 }
 
 export default function DashboardPage() {
-    const protection = useProtectedRoute(roles.admin);
-    if (protection) return protection;
+    const { accessToken } = useAuth();
 
     // const today = new Date().toLocaleDateString('ru-RU');
 
@@ -116,7 +114,7 @@ export default function DashboardPage() {
         setIsAdding(false);
     };
 
-    return (
+    return accessToken && (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <h1 className="text-3xl font-bold mb-6">Личный кабинет</h1>
             <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
