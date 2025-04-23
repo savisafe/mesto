@@ -2,6 +2,8 @@
 
 import { useState, Fragment, ChangeEvent, FormEvent } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
+import {useAuth} from "@/context/AuthContext";
+import {roles} from "@/types/types";
 
 interface Appointment {
     id: number;
@@ -63,6 +65,9 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
+    const { accessToken, user } = useAuth();
+    const admin = user?.role === roles.admin;
+
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
@@ -106,7 +111,7 @@ export default function EmployeesPage() {
         setEmployees(employees.filter(e => e.id !== id));
     };
 
-    return (
+    return accessToken && admin && (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>

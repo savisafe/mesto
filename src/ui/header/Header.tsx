@@ -10,26 +10,24 @@ import {routes} from "@/routes/routes";
 import {redirect} from "next/navigation";
 
 const protectedLinks = [
-    {href: '/dashboard', label: 'Дашборд'},
-    {href: '/calendar', label: 'Календарь'},
-    {href: '/clients', label: 'Клиенты'},
-    {href: '/employees', label: 'Сотрудники'},
-    {href: '/finance', label: 'Финансы'},
-    {href: '/reviews', label: 'Отзывы'},
-    {href: '/settings', label: 'Настройки'},
+    {href: '/dashboard', label: 'Панель управления'},
+    {href: '/news', label: 'Новости'},
+    {href: '/contact', label: 'Контакты'},
 ];
 
 const publicLinks = [
     {href: '/', label: 'Главная'},
-    {href: '/about', label: 'О нас'}, // опционально
-    {href: '/features', label: 'Возможности'}, // опционально
-    {href: '/contact', label: 'Контакты'}, // опционально
+    {href: '/about', label: 'О нас'},
+    {href: '/features', label: 'Возможности'},
+    {href: '/news', label: 'Новости'},
+    {href: '/contact', label: 'Контакты'},
 ];
 
 
 export function Header() {
+    const { accessToken, setAccessToken, user } = useAuth();
+    const userName = user?.name || "Пользователь";
     const [isOpen, setIsOpen] = useState(false);
-    const { accessToken, setAccessToken } = useAuth();
     const navLinks = accessToken ? protectedLinks : publicLinks;
 
     const logout = async () => {
@@ -57,7 +55,7 @@ export function Header() {
                 {accessToken
                     ? (
                         <div className="sm:[display:none] md:block text-sm text-purple-300">
-                            👤 Дарья | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                            👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
                         </div>
                     )
                     : (
@@ -98,7 +96,7 @@ export function Header() {
                         {accessToken
                             ? (
                                 <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
-                                    👤 Дарья | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                                    👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
                                 </div>
                             )
                             : (

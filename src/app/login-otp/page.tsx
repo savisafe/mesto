@@ -1,21 +1,14 @@
 'use client';
 
 import {useState} from 'react';
-import {useRouter} from 'next/navigation';
 import {supabase} from '../../../supabaseClient';
 import {routes} from '@/routes/routes';
-import {useAuth} from '@/context/AuthContext';
 import {motion} from 'framer-motion';
-import {Input} from "@/ui/input/Input";
-import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
+import {Input} from "@/ui/input/Input";
 
-export default function LoginPage() {
-    const router = useRouter();
-    const {setAccessToken} = useAuth();
-
+export default function LoginOTPPage() {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -23,16 +16,17 @@ export default function LoginPage() {
         setLoading(true);
         setError(null);
         try {
-            const {data, error} = await supabase.auth.signInWithPassword({
+            const {error} = await supabase.auth.signInWithOtp({
                 email,
-                password
+                options: {
+                    emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD
+                }
             });
 
             if (error) {
                 setError(error.message);
             } else {
-                setAccessToken(data.session.access_token);
-                router.push('/dashboard');
+                alert('Проверьте свою почту для входа в систему');
             }
         } catch (err) {
             setError((err as Error).message);
@@ -41,22 +35,13 @@ export default function LoginPage() {
     };
 
     return (
-        <Popup title={'Вход в систему'}>
+        <Popup title={'Вход через email'}>
             <Input
                 type="email"
-                placeholder="Email"
+                placeholder="Введите ваш email"
                 value={email}
                 setValue={setEmail}
-                transitionDelay={0.3}
-            />
-
-            <Input
-                type="password"
-                placeholder="Пароль"
-                value={password}
-                setValue={setPassword}
-                showButton={true}
-                transitionDelay={0.4}
+                transitionDelay={0.35}
             />
 
             {error && (
@@ -70,12 +55,16 @@ export default function LoginPage() {
                 </motion.p>
             )}
 
-            <Button
+            <motion.button
                 onClick={handleLogin}
-                loading={loading}
-                text="Войти"
-                transitionDelay={0.5}
-            />
+                disabled={loading}
+                className="cursor-pointer w-full py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
+                initial={{opacity: 0, y: 20}}
+                animate={{opacity: 1, y: 0}}
+                transition={{delay: 0.5}}
+            >
+                {loading ? 'Отправляем...' : 'Отправить ссылку входа'}
+            </motion.button>
 
             <motion.div
                 className="flex justify-between items-center mt-4 text-sm text-purple-400"
@@ -83,8 +72,8 @@ export default function LoginPage() {
                 animate={{opacity: 1}}
                 transition={{delay: 0.55}}
             >
-                <a href={routes.LOGIN_OTP} className="underline hover:text-purple-300">
-                    Войти через почту
+                <a href={routes.LOGIN} className="underline hover:text-purple-300">
+                    Вход
                 </a>
                 <a href={routes.REGISTRATION} className="underline hover:text-purple-300">
                     Регистрация

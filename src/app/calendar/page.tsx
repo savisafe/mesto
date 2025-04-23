@@ -49,8 +49,6 @@ export default function CalendarPage() {
         <div className="min-h-screen flex text-white bg-gradient-to-br from-purple-950 to-black">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Header />
-
                 <main className="flex-1 p-6 overflow-auto">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-3xl font-bold">Расписание</h1>
@@ -145,17 +143,6 @@ function Sidebar() {
                 <p>daria@example.com</p>
             </div>
         </aside>
-    );
-}
-
-function Header() {
-    return (
-        <header className="w-full p-4 border-b border-purple-800 bg-purple-900 bg-opacity-20 backdrop-blur-md">
-            <div className="max-w-7xl mx-auto flex justify-between items-center">
-                <h1 className="text-xl font-semibold">Календарь записи</h1>
-                <div className="text-sm text-purple-300">Вы вошли как Дарья</div>
-            </div>
-        </header>
     );
 }
 

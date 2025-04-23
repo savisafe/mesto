@@ -1,9 +1,11 @@
  'use client';
 
-import {JSX, useState} from 'react';
+import {JSX, useEffect, useState} from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {useAuth} from "@/context/AuthContext";
+ import {roles} from "@/types/types";
+ import {supabase} from "../../../supabaseClient";
 
 
 interface RecordEntry { time: string; client: string; master: string; }
@@ -19,11 +21,17 @@ interface WidgetConfig {
 }
 
 export default function DashboardPage() {
-    const { accessToken } = useAuth();
+    const { accessToken, user } = useAuth();
+    const admin = user?.role === roles.admin;
 
-    // const today = new Date().toLocaleDateString('ru-RU');
+    const test = async () => {
+        await supabase.from('businesses').select('*');
+    }
 
-    // Пример данных
+    useEffect(() => {
+        test()
+    }, []);
+
     const recordsToday = 7;
     const revenueToday = 25000;
     const revenueWeek = 128000;
@@ -103,20 +111,11 @@ export default function DashboardPage() {
         }
     };
 
-    // Состояние активных виджетов
-    const [widgets, setWidgets] = useState<WidgetConfig[]>(Object.values(availableWidgets));
-    const [isAdding, setIsAdding] = useState(false);
+    const [widgets, ] = useState<WidgetConfig[]>(Object.values(availableWidgets));
 
-    const handleAddWidget = (id: string) => {
-        const widget = availableWidgets[id];
-        if (widgets.find(w => w.id === id)) return;
-        setWidgets([...widgets, widget]);
-        setIsAdding(false);
-    };
-
-    return accessToken && (
+    return accessToken && admin && (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
-            <h1 className="text-3xl font-bold mb-6">Личный кабинет</h1>
+            <h1 className="text-3xl font-bold mb-6">Панель управления</h1>
             <motion.div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {widgets.map(widget => (
                     <div key={widget.id} className="bg-purple-800 min-h-60 bg-opacity-30 border border-purple-700 p-6 rounded-xl flex flex-col justify-between">
@@ -133,26 +132,6 @@ export default function DashboardPage() {
                         )}
                     </div>
                 ))}
-
-                {/* Добавить новый виджет */}
-                <div className="bg-purple-800 bg-opacity-30 border border-purple-700 p-6 rounded-xl flex flex-col items-center justify-center">
-                    {!isAdding ? (
-                        <button onClick={() => setIsAdding(true)} className="flex items-center text-purple-300 hover:text-white">
-                            <span className="text-4xl font-bold">＋</span><span className="ml-2 text-lg">Добавить виджет</span>
-                        </button>
-                    ) : (
-                        <div className="space-y-2 w-full">
-                            {Object.keys(availableWidgets).map(id => (
-                                <button key={id} onClick={() => handleAddWidget(id)} className="w-full text-left px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded">
-                                    {availableWidgets[id].title}
-                                </button>
-                            ))}
-                            <button onClick={() => setIsAdding(false)} className="mt-2 w-full px-4 py-2 bg-red-600 hover:bg-red-500 rounded">
-                                Отмена
-                            </button>
-                        </div>
-                    )}
-                </div>
             </motion.div>
         </div>
     );

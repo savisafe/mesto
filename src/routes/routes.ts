@@ -1,7 +1,7 @@
 export const routes = {
     HOME: '/',
     LOGIN: '/login',
-    RECOVERY: '/recovery',
+    LOGIN_OTP: '/login-otp',
     DASHBOARD: '/dashboard',
     CALENDAR: '/calendar',
     REGISTRATION: '/registration',
