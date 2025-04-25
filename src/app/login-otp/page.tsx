@@ -6,30 +6,31 @@ import {routes} from '@/routes/routes';
 import {motion} from 'framer-motion';
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
+import {useRouter} from "next/navigation";
+import {useAuth} from "@/context/AuthContext";
 
 export default function LoginOTPPage() {
+    const router = useRouter();
+    const {accessToken} = useAuth();
+    if (accessToken) return router.back();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const handleLogin = async () => {
+    const handleLoginOTP = async () => {
         setLoading(true);
         setError(null);
-        try {
-            const {error} = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD
-                }
-            });
-
-            if (error) {
-                setError(error.message);
-            } else {
-                alert('Проверьте свою почту для входа в систему');
+        const {error} = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+                emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD
             }
-        } catch (err) {
-            setError((err as Error).message);
+        });
+
+        if (error) {
+            setError(error.message);
+        } else {
+            alert('Проверьте свою почту для входа в систему');
         }
         setLoading(false);
     };
@@ -56,7 +57,7 @@ export default function LoginOTPPage() {
             )}
 
             <motion.button
-                onClick={handleLogin}
+                onClick={handleLoginOTP}
                 disabled={loading}
                 className="cursor-pointer w-full py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
                 initial={{opacity: 0, y: 20}}

@@ -9,33 +9,29 @@ import {motion} from 'framer-motion';
 import {Input} from "@/ui/input/Input";
 import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
+import {useNotification} from "@/context/NotificationContext";
 
 export default function LoginPage() {
-    const router = useRouter();
-    const {setAccessToken} = useAuth();
-
+    const router = useRouter()
+    const {accessToken, setAccessToken} = useAuth();
+    if (accessToken) return router.back();
+    const alert = useNotification();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
         setLoading(true);
-        setError(null);
-        try {
-            const {data, error} = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-
-            if (error) {
-                setError(error.message);
-            } else {
-                setAccessToken(data.session.access_token);
-                router.push('/dashboard');
-            }
-        } catch (err) {
-            setError((err as Error).message);
+        const {data, error} = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        if (error) {
+            //TODO переводить ошибки
+            alert('error', error.message);
+        } else {
+            setAccessToken(data.session.access_token);
+            router.replace(routes.DASHBOARD)
         }
         setLoading(false);
     };
@@ -59,29 +55,18 @@ export default function LoginPage() {
                 transitionDelay={0.4}
             />
 
-            {error && (
-                <motion.p
-                    className="text-red-400 text-sm mb-4 text-center"
-                    initial={{opacity: 0}}
-                    animate={{opacity: 1}}
-                    transition={{delay: 0.45}}
-                >
-                    {error}
-                </motion.p>
-            )}
-
             <Button
                 onClick={handleLogin}
                 loading={loading}
                 text="Войти"
-                transitionDelay={0.5}
+                transitionDelay={0.45}
             />
 
             <motion.div
                 className="flex justify-between items-center mt-4 text-sm text-purple-400"
                 initial={{opacity: 0}}
                 animate={{opacity: 1}}
-                transition={{delay: 0.55}}
+                transition={{delay: 0.5}}
             >
                 <a href={routes.LOGIN_OTP} className="underline hover:text-purple-300">
                     Войти через почту

@@ -9,9 +9,14 @@ import {motion} from 'framer-motion';
 import {Button} from "@/ui/button/Button";
 import {Input} from "@/ui/input/Input";
 import {Popup} from "@/ui/popup/Popup";
+import {useNotification} from "@/context/NotificationContext";
+import {useAuth} from "@/context/AuthContext";
 
 export default function RegistrationPage() {
     const router = useRouter();
+    const {accessToken, setAccessToken} = useAuth();
+    if (accessToken) return router.back();
+    const alert = useNotification();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -23,30 +28,27 @@ export default function RegistrationPage() {
         if (password === confirmPassword) {
             setLoading(true);
             setError(null);
-            try {
-                const {error} = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD,
-                        data: {
-                            name: name,
-                            role: 'admin',
-                        }
-                    },
-                });
-                if (error) {
-                    setError(error.message);
-                } else {
-                    alert('Проверьте почту для подтверждения регистрации');
-                    router.push('/login');
-                }
-            } catch (err) {
-                setError((err as Error).message);
+            const {error} = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.CREATE_BUSINESS,
+                    data: {
+                        name: name,
+                        role: 'admin',
+                    }
+                },
+            });
+            if (error) {
+                //TODO переводить ошибки
+                alert('error', error.message);
+                console.error(error.message);
+            } else {
+                alert('success', 'Проверьте почту для подтверждения регистрации');
+                router.push('/login');
             }
         } else {
-            //TODO добавить уведомления
-            alert('Пароли не совпадают');
+            alert('error', 'Пароли не совпадают');
         }
         setLoading(false);
     };

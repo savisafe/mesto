@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type {Metadata} from "next";
+import {Geist, Geist_Mono} from "next/font/google";
 import "./globals.css";
-import { Header } from "@/ui/header/Header";
-import { Footer } from "@/ui/footer/Footer";
-import { AuthProvider } from "@/context/AuthContext";
+import {Header} from "@/ui/header/Header";
+import {Footer} from "@/ui/footer/Footer";
+import {AuthProvider} from "@/context/AuthContext";
+import {NotificationProvider} from "@/context/NotificationContext";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -28,11 +29,13 @@ export default function RootLayout({
     return (
         <html lang="ru" className={`${geistSans.variable} ${geistMono.variable}`}>
         <body className="antialiased">
-        <AuthProvider>
-            <Header />
-            {children}
-            <Footer />
-        </AuthProvider>
+        <NotificationProvider>
+            <AuthProvider>
+                <Header />
+                {children}
+                <Footer />
+            </AuthProvider>
+        </NotificationProvider>
         </body>
         </html>
     );

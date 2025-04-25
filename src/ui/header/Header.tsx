@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import Link from 'next/link';
 import {Menu, X} from 'lucide-react';
 import {AnimatePresence, motion} from 'framer-motion';
@@ -25,10 +25,27 @@ const publicLinks = [
 
 
 export function Header() {
+    const ref = useRef<HTMLDivElement | null>(null);
     const { accessToken, setAccessToken, user } = useAuth();
     const userName = user?.name || "Пользователь";
     const [isOpen, setIsOpen] = useState(false);
     const navLinks = accessToken ? protectedLinks : publicLinks;
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (ref.current && !ref.current.contains(event.target as Node)) {
+                setIsOpen(!isOpen);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, setIsOpen]);
 
     const logout = async () => {
         await supabase.auth.signOut();
@@ -44,7 +61,7 @@ export function Header() {
                 </Link>
 
                 {/* Desktop nav */}
-                <nav className="sm:[display:none] md:flex gap-6 text-sm text-purple-300">
+                <nav className="flex [@media(max-width:640px)]:hidden gap-6 text-sm text-purple-300">
                     {navLinks.map(link => (
                         <Link key={link.href} href={link.href} className="hover:text-white">
                             {link.label}
@@ -52,20 +69,22 @@ export function Header() {
                     ))}
                 </nav>
 
-                {accessToken
-                    ? (
-                        <div className="sm:[display:none] md:block text-sm text-purple-300">
-                            👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
-                        </div>
-                    )
-                    : (
-                        <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
-                    )
-                }
+                <div className="block [@media(max-width:640px)]:hidden">
+                    {accessToken
+                        ? (
+                            <div className="text-sm text-purple-300">
+                                👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                            </div>
+                        )
+                        : (
+                            <Link href={routes.LOGIN} className="cursor-pointer sm:hidden hover:text-white">Войти</Link>
+                        )
+                    }
+                </div>
 
                 {/* Burger */}
                 <button
-                    className="text-white md:hidden"
+                    className="text-white sm:[display:block] md:[display: none]"
                     onClick={() => setIsOpen(prev => !prev)}
                     aria-label="Меню"
                 >
@@ -77,6 +96,7 @@ export function Header() {
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
+                        ref={ref}
                         initial={{opacity: 0, scale: 0.95, y: -10}}
                         animate={{opacity: 1, scale: 1, y: 0}}
                         exit={{opacity: 0, scale: 0.95, y: -10}}
@@ -88,7 +108,7 @@ export function Header() {
                                 key={link.href}
                                 href={link.href}
                                 className="block text-sm text-purple-300 hover:text-white"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => setIsOpen(!isOpen)}
                             >
                                 {link.label}
                             </Link>
