@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {EmployeeStatus, RecordEntry, Review, roles, WidgetConfig} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
@@ -9,6 +9,7 @@ import {useAccess} from "@/hooks/useAccess";
 import {useAuth} from "@/context/AuthContext";
 import {routes} from "@/routes/routes";
 import {Button} from "@/ui/button/Button";
+import {Select} from "@/ui/select/Select";
 
  //mocks
  const recordsToday = 7;
@@ -101,10 +102,16 @@ import {Button} from "@/ui/button/Button";
  };
 
 export default function DashboardPage() {
-    const {businessesData} = useAuth();
-    console.log(businessesData);
+    const { businessesData } = useAuth();
     const access = useAccess(roles.owner);
     const [widgets] = useState(Object.values(availableWidgets));
+    const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (businessesData.length > 0) {
+            setSelectedBusiness(businessesData[0].id);
+        }
+    }, [businessesData]);
 
     if (access.status !== 'ok') {
         return <LayoutPage>{access.component}</LayoutPage>;
@@ -112,7 +119,23 @@ export default function DashboardPage() {
 
     return (
         <LayoutPage>
-            <h1 className="text-3xl font-bold mb-6">Панель управления {businessesData[0]?.name}</h1>
+            <div className="flex items-center gap-5 mb-6">
+                <h1 className="text-3xl font-bold">
+                    Панель управления
+                </h1>
+                {businessesData.length > 1 && (
+                    <div className="w-64">
+                        <Select
+                            options={businessesData.map(biz => ({
+                                label: biz.name,
+                                value: biz.id,
+                            }))}
+                            value={selectedBusiness || ''}
+                            onChange={(val) => setSelectedBusiness(val)}
+                        />
+                    </div>
+                )}
+            </div>
             <DashboardWidget widgets={widgets} />
         </LayoutPage>
     );

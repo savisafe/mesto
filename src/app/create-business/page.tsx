@@ -10,6 +10,8 @@ import {roles} from "@/types/types";
 import {Popup} from "@/ui/popup/Popup";
 import {useAuth} from "@/context/AuthContext";
 import {useNotification} from "@/context/NotificationContext";
+import Spinner from "@/ui/spinner/Spinner";
+import { motion } from "framer-motion";
 
 export default function CreateBusinessPage() {
     const alert = useNotification();
@@ -140,7 +142,7 @@ export default function CreateBusinessPage() {
                     <h1 className="text-3xl font-bold mb-6">Мои бизнесы</h1>
                     <div className="w-1/5">
                         <Button onClick={() => setCreatePopupOpen(true)}>
-                            Создать бизнес
+                            Создать новый бизнес
                         </Button>
                     </div>
                 </div>
@@ -184,13 +186,17 @@ export default function CreateBusinessPage() {
                 </Popup>
             )}
 
-            <div className="mt-6">
+            <motion.div className="mt-6">
                 {loading ? (
-                    <p>Загрузка...</p>
+                    <Spinner/>
                 ) : businesses.length === 0 ? (
                     <p>У вас пока нет бизнесов.</p>
                 ) : (
-                    <div className="grid gap-4">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4}}
+                        className="grid gap-4">
                         {businesses.map((biz) => (
                             <div key={biz.id} className="p-4 border rounded shadow flex justify-between items-center">
                                 <span className="font-medium">{biz.name}</span>
@@ -204,9 +210,9 @@ export default function CreateBusinessPage() {
                                 </div>
                             </div>
                         ))}
-                    </div>
+                    </motion.div>
                 )}
-            </div>
+            </motion.div>
         </LayoutPage>
     );
 }
