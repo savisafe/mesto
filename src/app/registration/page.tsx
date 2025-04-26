@@ -10,12 +10,10 @@ import {Button} from "@/ui/button/Button";
 import {Input} from "@/ui/input/Input";
 import {Popup} from "@/ui/popup/Popup";
 import {useNotification} from "@/context/NotificationContext";
-import {useAuth} from "@/context/AuthContext";
+import {roles} from "@/types/types";
 
 export default function RegistrationPage() {
     const router = useRouter();
-    const {accessToken, setAccessToken} = useAuth();
-    if (accessToken) return router.back();
     const alert = useNotification();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -35,17 +33,16 @@ export default function RegistrationPage() {
                     emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.CREATE_BUSINESS,
                     data: {
                         name: name,
-                        role: 'admin',
+                        role: roles.owner,
                     }
                 },
             });
             if (error) {
                 //TODO переводить ошибки
                 alert('error', error.message);
-                console.error(error.message);
             } else {
                 alert('success', 'Проверьте почту для подтверждения регистрации');
-                router.push('/login');
+                router.push(routes.LOGIN);
             }
         } else {
             alert('error', 'Пароли не совпадают');
@@ -102,9 +99,10 @@ export default function RegistrationPage() {
             <Button
                 onClick={handleRegistration}
                 loading={loading}
-                text="Зарегистрироваться"
                 transitionDelay={0.55}
-            />
+            >
+                Зарегистрироваться
+            </Button>
 
             <motion.p
                 className="mt-6 text-purple-400 text-sm text-center"

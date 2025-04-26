@@ -1,0 +1,36 @@
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import Spinner from "@/ui/spinner/Spinner";
+import {routes} from "@/routes/routes";
+
+export const useAccess = (requiredRole?: string) => {
+    const { accessToken, user, loading } = useAuth();
+    const router = useRouter();
+
+    const isAllowed = accessToken && (!requiredRole || user?.user_metadata?.role === requiredRole);
+
+    useEffect(() => {
+        if (!loading && accessToken === null) {
+            router.replace(routes.HOME);
+        }
+    }, [accessToken, loading, router]);
+
+    if (loading || accessToken === null) {
+        return { status: 'loading', component: <Spinner /> };
+    }
+
+    if (!isAllowed) {
+        return {
+            status: 'forbidden',
+            component: (
+                <div className="flex flex-col items-center justify-center h-screen">
+                    <h1 className="text-3xl font-bold mb-4">Доступ запрещён</h1>
+                    <p className="text-lg text-gray-700 mb-6">У вас нет прав доступа к этой странице.</p>
+                </div>
+            ),
+        };
+    }
+
+    return { status: 'ok' };
+};

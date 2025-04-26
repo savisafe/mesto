@@ -66,7 +66,7 @@ const initialEmployees: Employee[] = [
 
 export default function EmployeesPage() {
     const { accessToken, user } = useAuth();
-    const admin = user?.role === roles.admin;
+    const admin = user?.user_metadata?.role === roles.owner;
 
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
     const [searchTerm, setSearchTerm] = useState('');

@@ -1,12 +1,14 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import Link from 'next/link';
-import {useAuth} from "@/context/AuthContext";
 import {EmployeeStatus, RecordEntry, Review, roles, WidgetConfig} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {DashboardWidget} from "@/widgets/DashboardWidget";
-import {useRouter} from "next/navigation";
+import {useAccess} from "@/hooks/useAccess";
+import {useAuth} from "@/context/AuthContext";
+import {routes} from "@/routes/routes";
+import {Button} from "@/ui/button/Button";
 
  //mocks
  const recordsToday = 7;
@@ -46,8 +48,8 @@ import {useRouter} from "next/navigation";
          id: 'revenue', title: 'Выручка за день / неделю',
          content: (
              <>
-                 <p className="text-2xl font-bold">{revenueToday.toLocaleString()} ₸</p>
-                 <p className="text-sm text-purple-300 mt-2">За неделю: {revenueWeek.toLocaleString()} ₸</p>
+                 <p className="text-2xl font-bold">{revenueToday} ₸</p>
+                 <p className="text-sm text-purple-300 mt-2">За неделю: {revenueWeek} ₸</p>
              </>
          ),
          link: '/finance', buttonText: 'Перейти в аналитику'
@@ -83,25 +85,34 @@ import {useRouter} from "next/navigation";
                  <Link href="/employees"><button className="bg-purple-700 hover:bg-purple-600 rounded-xl px-4 py-2">+ Добавить сотрудника</button></Link>
              </div>
          ), link: null
+     },
+     createBusiness: {
+         id: 'create-business', title: 'Мои бизнесы',
+         content: (
+             <div className="flex flex-col gap-3">
+                <Link href={routes.CREATE_BUSINESS}>
+                    <Button>
+                        Перейти в создание бизнеса
+                    </Button>
+                </Link>
+             </div>
+         ), link: null
      }
  };
 
 export default function DashboardPage() {
-    const router = useRouter();
-    const { accessToken, user } = useAuth();
-    const admin = user?.role === roles.admin;
-    const [widgets, ] = useState<WidgetConfig[]>(Object.values(availableWidgets));
+    const {businessesData} = useAuth();
+    console.log(businessesData);
+    const access = useAccess(roles.owner);
+    const [widgets] = useState(Object.values(availableWidgets));
 
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (!accessToken && !admin) {
-                router.back();
-            }
-        }
-    }, [accessToken, admin]);
+    if (access.status !== 'ok') {
+        return <LayoutPage>{access.component}</LayoutPage>;
+    }
 
     return (
-        <LayoutPage title="Панель управления">
+        <LayoutPage>
+            <h1 className="text-3xl font-bold mb-6">Панель управления {businessesData[0]?.name}</h1>
             <DashboardWidget widgets={widgets} />
         </LayoutPage>
     );

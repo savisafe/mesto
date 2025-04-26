@@ -27,7 +27,7 @@ const publicLinks = [
 export function Header() {
     const ref = useRef<HTMLDivElement | null>(null);
     const { accessToken, setAccessToken, user } = useAuth();
-    const userName = user?.name || "Пользователь";
+    const userName = user?.user_metadata?.name || "Пользователь";
     const [isOpen, setIsOpen] = useState(false);
     const navLinks = accessToken ? protectedLinks : publicLinks;
 
@@ -45,7 +45,7 @@ export function Header() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, setIsOpen]);
+    }, [isOpen, setIsOpen, accessToken]);
 
     const logout = async () => {
         await supabase.auth.signOut();
@@ -60,7 +60,6 @@ export function Header() {
                     Mesto<span className="text-purple-400">.pro</span>
                 </Link>
 
-                {/* Desktop nav */}
                 <nav className="flex [@media(max-width:640px)]:hidden gap-6 text-sm text-purple-300">
                     {navLinks.map(link => (
                         <Link key={link.href} href={link.href} className="hover:text-white">
@@ -77,14 +76,13 @@ export function Header() {
                             </div>
                         )
                         : (
-                            <Link href={routes.LOGIN} className="cursor-pointer sm:hidden hover:text-white">Войти</Link>
+                            <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
                         )
                     }
                 </div>
 
-                {/* Burger */}
                 <button
-                    className="text-white sm:[display:block] md:[display: none]"
+                    className="text-white [display:none] [@media(max-width:640px)]:block"
                     onClick={() => setIsOpen(prev => !prev)}
                     aria-label="Меню"
                 >
@@ -92,7 +90,6 @@ export function Header() {
                 </button>
             </div>
 
-            {/* Mobile nav with animation */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div

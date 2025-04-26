@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+'use client';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-//TODO скрыть ключ из билда
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createPagesBrowserClient();

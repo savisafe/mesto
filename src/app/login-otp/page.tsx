@@ -8,11 +8,11 @@ import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
 import {useRouter} from "next/navigation";
 import {useAuth} from "@/context/AuthContext";
+import {Button} from "@/ui/button/Button";
 
 export default function LoginOTPPage() {
     const router = useRouter();
     const {accessToken} = useAuth();
-    if (accessToken) return router.back();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -56,16 +56,13 @@ export default function LoginOTPPage() {
                 </motion.p>
             )}
 
-            <motion.button
+            <Button
                 onClick={handleLoginOTP}
-                disabled={loading}
-                className="cursor-pointer w-full py-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
-                initial={{opacity: 0, y: 20}}
-                animate={{opacity: 1, y: 0}}
-                transition={{delay: 0.5}}
+                loading={loading}
+                transitionDelay={0.5}
             >
                 {loading ? 'Отправляем...' : 'Отправить ссылку входа'}
-            </motion.button>
+            </Button>
 
             <motion.div
                 className="flex justify-between items-center mt-4 text-sm text-purple-400"

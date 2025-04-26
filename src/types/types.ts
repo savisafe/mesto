@@ -1,9 +1,10 @@
 import {JSX} from "react";
 
-export type Role = 'admin' | 'manager' | 'employee' | 'client';
+export type Role = 'admin' | 'owner' | 'manager' | 'employee' | 'client';
 
 export const roles: Record<Role, Role> = {
     admin: 'admin',
+    owner: 'owner',
     manager: 'manager',
     employee: 'employee',
     client: 'client'
