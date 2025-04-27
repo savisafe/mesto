@@ -3,6 +3,7 @@
 import React, {createContext, useContext, useState, useEffect} from 'react';
 import {supabase} from "../../supabaseClient";
 import {UserMetadata} from "@supabase/auth-js";
+import {usePathname} from "next/navigation";
 
 interface AuthContextType {
     accessToken: string | null;
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({children}: { children: React.ReactNode }) => {
+    const pathname = usePathname()
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<UserMetadata | null>(null);
     const [role, setRole] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export const AuthProvider = ({children}: { children: React.ReactNode }) => {
                 setBusinessesData(businesses || []);
             })
         }
-    }, [user]);
+    }, [pathname]);
 
     return (
         <AuthContext.Provider

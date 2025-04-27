@@ -8,6 +8,7 @@ import {useAuth} from "@/context/AuthContext";
 import {supabase} from "../../../supabaseClient";
 import {routes} from "@/routes/routes";
 import {redirect} from "next/navigation";
+import Spinner from "@/ui/spinner/Spinner";
 
 const protectedLinks = [
     {href: '/dashboard', label: 'Панель управления'},
@@ -26,10 +27,15 @@ const publicLinks = [
 
 export function Header() {
     const ref = useRef<HTMLDivElement | null>(null);
-    const { accessToken, setAccessToken, user } = useAuth();
+    const {accessToken, setAccessToken, user} = useAuth();
     const userName = user?.user_metadata?.name || "Пользователь";
     const [isOpen, setIsOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
     const navLinks = accessToken ? protectedLinks : publicLinks;
+
+    useEffect(() => {
+        setLoading(!loading)
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -60,26 +66,34 @@ export function Header() {
                     Mesto<span className="text-purple-400">.pro</span>
                 </Link>
 
-                <nav className="flex [@media(max-width:640px)]:hidden gap-6 text-sm text-purple-300">
-                    {navLinks.map(link => (
-                        <Link key={link.href} href={link.href} className="hover:text-white">
-                            {link.label}
-                        </Link>
-                    ))}
-                </nav>
+                {loading
+                    ?
+                    <Spinner/>
+                    :
+                    <>
+                        <nav className="flex [@media(max-width:640px)]:hidden gap-6 text-sm text-purple-300">
+                            {navLinks.map(link => (
+                                <Link key={link.href} href={link.href} className="hover:text-white">
+                                    {link.label}
+                                </Link>
+                            ))}
+                        </nav>
 
-                <div className="block [@media(max-width:640px)]:hidden">
-                    {accessToken
-                        ? (
-                            <div className="text-sm text-purple-300">
-                                👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
-                            </div>
-                        )
-                        : (
-                            <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
-                        )
-                    }
-                </div>
+                        <div className="block [@media(max-width:640px)]:hidden">
+                            {accessToken
+                                ? (
+                                    <div className="text-sm text-purple-300">
+                                        👤 {userName} | <button className="cursor-pointer hover:text-white"
+                                                               onClick={logout}>Выйти</button>
+                                    </div>
+                                )
+                                : (
+                                    <Link href={routes.LOGIN} className="cursor-pointer hover:text-white">Войти</Link>
+                                )
+                            }
+                        </div>
+                    </>
+                }
 
                 <button
                     className="text-white [display:none] [@media(max-width:640px)]:block"
@@ -113,7 +127,8 @@ export function Header() {
                         {accessToken
                             ? (
                                 <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
-                                    👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                                    👤 {userName} | <button className="cursor-pointer hover:text-white"
+                                                           onClick={logout}>Выйти</button>
                                 </div>
                             )
                             : (
