@@ -1,13 +1,10 @@
 'use client';
 
 import {useEffect, useState} from 'react';
-import Link from 'next/link';
 import {EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
 import {useAuth} from "@/context/AuthContext";
-import {routes} from "@/routes/routes";
-import {Button} from "@/ui/button/Button";
 import {Select} from "@/ui/select/Select";
 import {WidgetCard} from "@/ui/widget-card/WidgetCard";
 
@@ -30,92 +27,12 @@ const recentReviews: Review[] = [
     {rating: 4, comment: 'Отлично, но пришлось ждать.', client: 'Диана'}
 ];
 
-const availableWidgets = [
-    {
-        id: 'records',
-        title: `Сегодня: ${recordsToday} записей`,
-        content: (
-            <>
-                <ul className="mt-4 space-y-1 text-sm">
-                    {recentRecords.map((r, i) => (
-                        <li key={i}>{r.time} — {r.client} ({r.master})</li>
-                    ))}
-                </ul>
-            </>
-        ),
-        link: '/calendar',
-        buttonText: 'Перейти в календарь'
-    },
-    {
-        id: 'revenue', title: 'Выручка за день / неделю',
-        content: (
-            <>
-                <p className="text-2xl font-bold">{revenueToday} ₸</p>
-                <p className="text-sm text-purple-300 mt-2">За неделю: {revenueWeek} ₸</p>
-            </>
-        ),
-        link: '/finance', buttonText: 'Перейти в аналитику'
-    },
-    {
-        id: 'activity', title: 'Активность сотрудников',
-        content: (
-            <ul className="space-y-2 text-sm">
-                {employeeActivity.map((e, i) => (
-                    <li key={i}>{e.name}: {e.label}</li>
-                ))}
-            </ul>
-        ),
-        link: '/employees', buttonText: 'Перейти к сотрудникам'
-    },
-    {
-        id: 'reviews', title: 'Отзывы клиентов',
-        content: (
-            <ul className="space-y-2 text-sm">
-                {recentReviews.map((rev, i) => (
-                    <li key={i}>{'⭐'.repeat(rev.rating)} — {rev.client}: {rev.comment}</li>
-                ))}
-            </ul>
-        ),
-        link: '/reviews', buttonText: 'Перейти к отзывам'
-    },
-    {
-        id: 'actions', title: 'Быстрые действия',
-        content: (
-            <div className="flex flex-col gap-3">
-                <Link href="/calendar">
-                    <button className="bg-purple-700 hover:bg-purple-600 rounded-xl px-4 py-2">+ Добавить запись
-                    </button>
-                </Link>
-                <Link href="/clients">
-                    <button className="bg-purple-700 hover:bg-purple-600 rounded-xl px-4 py-2">+ Добавить клиента
-                    </button>
-                </Link>
-                <Link href="/employees">
-                    <button className="bg-purple-700 hover:bg-purple-600 rounded-xl px-4 py-2">+ Добавить сотрудника
-                    </button>
-                </Link>
-            </div>
-        ), link: null
-    },
-    {
-        id: 'create-business', title: 'Мои бизнесы',
-        content: (
-            <div className="flex flex-col gap-3">
-                <Link href={routes.CREATE_BUSINESS}>
-                    <Button>
-                        Перейти
-                    </Button>
-                </Link>
-            </div>
-        ), link: null
-    }
-];
-
 export default function DashboardPage() {
     const {businessesData} = useAuth();
     const access = useAccess(roles.owner);
-    const [widgets] = useState(Object.values(availableWidgets));
     const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
+
+    console.log(access)
 
     useEffect(() => {
         if (businessesData.length > 0) {
@@ -126,6 +43,97 @@ export default function DashboardPage() {
     if (access.status !== 'ok') {
         return <LayoutPage>{access.component}</LayoutPage>;
     }
+
+    const availableWidgets = [
+        {
+            id: 'records',
+            title: `Сегодня: ${recordsToday} записей`,
+            content: (
+                <>
+                    <ul className="mt-4 space-y-1 text-sm">
+                        {recentRecords.map((r, i) => (
+                            <li key={i}>{r.time} — {r.client} ({r.master})</li>
+                        ))}
+                    </ul>
+                </>
+            ),
+            link: '/calendar',
+            buttonText: 'Перейти'
+        },
+        {
+            id: 'revenue', title: 'Выручка за день / неделю',
+            content: (
+                <>
+                    <p className="text-2xl font-bold">{revenueToday} ₸</p>
+                    <p className="text-sm text-purple-300 mt-2">За неделю: {revenueWeek} ₸</p>
+                </>
+            ),
+            link: '/finance',
+            buttonText: 'Перейти'
+        },
+        {
+            id: 'employees', title: 'Мои сотрудники',
+            content: (
+                <ul className="space-y-2 text-sm">
+                    {employeeActivity.map((e, i) => (
+                        <li key={i}>{e.name}: {e.label}</li>
+                    ))}
+                </ul>
+            ),
+            link: '/employees',
+            buttonText: 'Перейти'
+        },
+        {
+            id: 'reviews', title: 'Отзывы клиентов',
+            content: (
+                <ul className="space-y-2 text-sm">
+                    {recentReviews.map((rev, i) => (
+                        <li key={i}>{'⭐'.repeat(rev.rating)} — {rev.client}: {rev.comment}</li>
+                    ))}
+                </ul>
+            ),
+            link: '/reviews',
+            buttonText: 'Перейти'
+        },
+        // {
+        //     id: 'actions', title: 'Быстрые действия',
+        //     content: (
+        //         <div className="flex flex-col gap-3">
+        //             <Link href="/calendar">
+        //                 <Button>
+        //                     Добавить запись
+        //                 </Button>
+        //             </Link>
+        //             <Link href="/clients">
+        //                 <Button>
+        //                     Добавить клиента
+        //                 </Button>
+        //             </Link>
+        //             <Link href="/employees">
+        //                 <Button>
+        //                     Добавить сотрудника
+        //                 </Button>
+        //             </Link>
+        //         </div>
+        //     ),
+        //     link: null,
+        //     buttonText: 'Перейти'
+        // },
+        {
+            id: 'create-business', title: 'Мои бизнесы',
+            content: (
+                <ul className="flex flex-col gap-3">
+                    {businessesData.map((b) => (
+                        <li key={b.id}>
+                            {b.name}
+                        </li>
+                    ))}
+                </ul>
+            ),
+            link: '/create-business',
+            buttonText: 'Перейти'
+        }
+    ];
 
     return (
         <LayoutPage>
@@ -147,7 +155,7 @@ export default function DashboardPage() {
                 )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {widgets.map((widget) => (
+                {availableWidgets.map((widget) => (
                     <WidgetCard
                         key={widget.id}
                         title={widget.title}

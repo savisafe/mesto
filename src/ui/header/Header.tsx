@@ -7,7 +7,7 @@ import {AnimatePresence, motion} from 'framer-motion';
 import {useAuth} from "@/context/AuthContext";
 import {supabase} from "../../../supabaseClient";
 import {routes} from "@/routes/routes";
-import {redirect} from "next/navigation";
+import {useRouter} from "next/navigation";
 import Spinner from "@/ui/spinner/Spinner";
 
 const protectedLinks = [
@@ -24,18 +24,12 @@ const publicLinks = [
     {href: '/contact', label: 'Контакты'},
 ];
 
-
 export function Header() {
+    const router = useRouter();
     const ref = useRef<HTMLDivElement | null>(null);
-    const {accessToken, setAccessToken, user} = useAuth();
-    const userName = user?.user_metadata?.name || "Пользователь";
+    const {accessToken, userName, loading} = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
     const navLinks = accessToken ? protectedLinks : publicLinks;
-
-    useEffect(() => {
-        setLoading(!loading)
-    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -43,11 +37,9 @@ export function Header() {
                 setIsOpen(!isOpen);
             }
         };
-
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
         }
-
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
@@ -55,8 +47,7 @@ export function Header() {
 
     const logout = async () => {
         await supabase.auth.signOut();
-        setAccessToken(null);
-        redirect(routes.HOME)
+        router.replace(routes.HOME);
     };
 
     return (
@@ -127,8 +118,7 @@ export function Header() {
                         {accessToken
                             ? (
                                 <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
-                                    👤 {userName} | <button className="cursor-pointer hover:text-white"
-                                                           onClick={logout}>Выйти</button>
+                                    👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
                                 </div>
                             )
                             : (

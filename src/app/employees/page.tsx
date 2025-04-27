@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, Fragment, ChangeEvent, FormEvent } from 'react';
+import {useState, Fragment, ChangeEvent, FormEvent, useEffect} from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import {useAuth} from "@/context/AuthContext";
 import {roles} from "@/types/types";
+import {supabase} from "../../../supabaseClient";
 
 interface Appointment {
     id: number;
@@ -65,8 +66,47 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
+    const {businessesData} = useAuth();
     const { accessToken, user } = useAuth();
     const admin = user?.user_metadata?.role === roles.owner;
+
+    const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
+        const { data, error } = await supabase
+            .from('employee_invitations')
+            .insert([
+                {
+                    email: email,
+                    business_id: businessId,
+                    invited_by: inviterId,
+                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 часа
+                }
+            ])
+            .select('*'); // обязательно вернуть запись
+
+        if (error) {
+            console.error('❌ Ошибка приглашения сотрудника:', error);
+            return null;
+        }
+
+        if (!data || data.length === 0) {
+            console.error('❌ Приглашение не создано');
+            return null;
+        }
+
+        const invitation = data[0]; // первая (и единственная) запись
+
+        // Сгенерируем ссылку для регистрации
+        const inviteLink = `${process.env.NEXT_PUBLIC_URL}/registration?invite=${invitation.id}`;
+
+        console.log('✅ Приглашение сотрудника создано:', invitation);
+        console.log('🔗 Ссылка для регистрации:', inviteLink);
+
+        return { invitation, inviteLink };
+    };
+
+    useEffect(() => {
+        inviteEmployee('seher62233@hedotu.com',"9dc40987-499e-4e91-bfe1-a23de034f94d", "70ad6536-f589-4925-bd89-043cc1fc1644")
+    }, []);
 
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
     const [searchTerm, setSearchTerm] = useState('');

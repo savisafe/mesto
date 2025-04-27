@@ -11,6 +11,7 @@ import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
 import {useNotification} from "@/context/NotificationContext";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
+import {roles} from "@/types/types";
 
 export default function LoginPage() {
     const router = useRouter()
@@ -31,7 +32,12 @@ export default function LoginPage() {
             alert('error', error.message);
         } else {
             setAccessToken(data.session.access_token);
-            router.replace(routes.DASHBOARD)
+            let role = data?.user?.user_metadata?.role
+            if (role === roles.employee || role === roles.manager) {
+                router.replace(routes.CALENDAR)
+            } else {
+                router.replace(routes.DASHBOARD)
+            }
         }
         setLoading(false);
     };
@@ -56,13 +62,15 @@ export default function LoginPage() {
                     transitionDelay={0.4}
                 />
 
-                <Button
-                    onClick={handleLogin}
-                    loading={loading}
-                    transitionDelay={0.45}
-                >
-                    Войти
-                </Button>
+                <div className="flex justify-center mt-4">
+                    <Button
+                        onClick={handleLogin}
+                        loading={loading}
+                        transitionDelay={0.45}
+                    >
+                        Войти  в систему
+                    </Button>
+                </div>
 
                 <motion.div
                     className="flex justify-between items-center mt-4 text-sm text-purple-400"

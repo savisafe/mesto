@@ -6,13 +6,11 @@ import {routes} from '@/routes/routes';
 import {motion} from 'framer-motion';
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
-import {useRouter} from "next/navigation";
-import {useAuth} from "@/context/AuthContext";
 import {Button} from "@/ui/button/Button";
+import {useNotification} from "@/context/NotificationContext";
 
 export default function LoginOTPPage() {
-    const router = useRouter();
-    const {accessToken} = useAuth();
+    const alert = useNotification();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -23,14 +21,14 @@ export default function LoginOTPPage() {
         const {error} = await supabase.auth.signInWithOtp({
             email,
             options: {
-                emailRedirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL + routes.DASHBOARD
+                emailRedirectTo: process.env.NEXT_PUBLIC_URL
             }
         });
 
         if (error) {
             setError(error.message);
         } else {
-            alert('Проверьте свою почту для входа в систему');
+            alert('info', 'Проверьте свою почту для входа в систему');
         }
         setLoading(false);
     };
@@ -56,13 +54,15 @@ export default function LoginOTPPage() {
                 </motion.p>
             )}
 
-            <Button
-                onClick={handleLoginOTP}
-                loading={loading}
-                transitionDelay={0.5}
-            >
-                {loading ? 'Отправляем...' : 'Отправить ссылку входа'}
-            </Button>
+            <div className="flex justify-center mt-4">
+                <Button
+                    onClick={handleLoginOTP}
+                    loading={loading}
+                    transitionDelay={0.5}
+                >
+                    {loading ? 'Отправляем...' : 'Отправить ссылку входа'}
+                </Button>
+            </div>
 
             <motion.div
                 className="flex justify-between items-center mt-4 text-sm text-purple-400"
