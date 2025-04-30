@@ -2,9 +2,10 @@
 
 import {useState, Fragment, ChangeEvent, FormEvent, useEffect} from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import {useAuth} from "@/context/AuthContext";
 import {roles} from "@/types/types";
 import {supabase} from "../../../supabaseClient";
+import {useAccess} from "@/hooks/useAccess";
+import {LayoutPage} from "@/ui/layouts/LayoutPage";
 
 interface Appointment {
     id: number;
@@ -66,10 +67,22 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
-    const {businessesData} = useAuth();
-    const { accessToken, user } = useAuth();
-    const admin = user?.user_metadata?.role === roles.owner;
+    const access = useAccess(roles.owner, roles.admin);
+    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
 
+    const [isOpen, setIsOpen] = useState(false);
+    const [newEmp, setNewEmp] = useState<{
+        name: string;
+        role: 'Мастер' | 'Админ';
+        branch: string;
+    }>({
+        name: '',
+        role: 'Мастер',
+        branch: '',
+    });
+    
     const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
         const { data, error } = await supabase
             .from('employee_invitations')
@@ -81,7 +94,7 @@ export default function EmployeesPage() {
                     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 часа
                 }
             ])
-            .select('*'); // обязательно вернуть запись
+            .select('*');
 
         if (error) {
             console.error('❌ Ошибка приглашения сотрудника:', error);
@@ -107,21 +120,6 @@ export default function EmployeesPage() {
     useEffect(() => {
         inviteEmployee('seher62233@hedotu.com',"9dc40987-499e-4e91-bfe1-a23de034f94d", "70ad6536-f589-4925-bd89-043cc1fc1644")
     }, []);
-
-    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
-
-    const [isOpen, setIsOpen] = useState(false);
-    const [newEmp, setNewEmp] = useState<{
-        name: string;
-        role: 'Мастер' | 'Админ';
-        branch: string;
-    }>({
-        name: '',
-        role: 'Мастер',
-        branch: '',
-    });
 
     const openModal = () => setIsOpen(true);
     const closeModal = () => setIsOpen(false);
@@ -151,7 +149,11 @@ export default function EmployeesPage() {
         setEmployees(employees.filter(e => e.id !== id));
     };
 
-    return accessToken && admin && (
+    if (access.status !== 'ok') {
+        return <LayoutPage>{access.component}</LayoutPage>;
+    }
+
+    return (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>

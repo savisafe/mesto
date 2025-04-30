@@ -28,11 +28,9 @@ const recentReviews: Review[] = [
 ];
 
 export default function DashboardPage() {
-    const {businessesData} = useAuth();
-    const access = useAccess(roles.owner);
+    const {businessesData, role} = useAuth();
     const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
-
-    console.log(access)
+    const access = useAccess(roles.owner, roles.admin);
 
     useEffect(() => {
         if (businessesData.length > 0) {
@@ -84,7 +82,7 @@ export default function DashboardPage() {
             buttonText: 'Перейти'
         },
         {
-            id: 'reviews', title: 'Отзывы клиентов',
+            id: 'reviews', title: 'Отзывы',
             content: (
                 <ul className="space-y-2 text-sm">
                     {recentReviews.map((rev, i) => (
@@ -95,6 +93,30 @@ export default function DashboardPage() {
             link: '/reviews',
             buttonText: 'Перейти'
         },
+        {
+            id: 'create-business', title: 'Мои бизнесы',
+            content: (
+                <ul className="flex flex-col gap-3">
+                    {businessesData.map((b) => (
+                        <li key={b.id}>
+                            {b.name}
+                        </li>
+                    ))}
+                </ul>
+            ),
+            link: '/create-business',
+            buttonText: 'Перейти'
+        },
+        {
+            id: 'clients', title: 'Клиенская база',
+            content: (
+                <ul className="flex flex-col gap-3">
+
+                </ul>
+            ),
+            link: '/clients',
+            buttonText: 'Перейти'
+        }
         // {
         //     id: 'actions', title: 'Быстрые действия',
         //     content: (
@@ -119,20 +141,6 @@ export default function DashboardPage() {
         //     link: null,
         //     buttonText: 'Перейти'
         // },
-        {
-            id: 'create-business', title: 'Мои бизнесы',
-            content: (
-                <ul className="flex flex-col gap-3">
-                    {businessesData.map((b) => (
-                        <li key={b.id}>
-                            {b.name}
-                        </li>
-                    ))}
-                </ul>
-            ),
-            link: '/create-business',
-            buttonText: 'Перейти'
-        }
     ];
 
     return (
