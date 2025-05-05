@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
@@ -28,15 +28,9 @@ const recentReviews: Review[] = [
 ];
 
 export default function DashboardPage() {
-    const {businessesData, role} = useAuth();
-    const [selectedBusiness, setSelectedBusiness] = useState<string | null>(null);
+    const {businessesData, currentBusiness} = useAuth();
+    const [selectedBusiness, setSelectedBusiness] = useState<string>(currentBusiness);
     const access = useAccess(roles.owner, roles.admin);
-
-    useEffect(() => {
-        if (businessesData.length > 0) {
-            setSelectedBusiness(businessesData[0].id);
-        }
-    }, [businessesData]);
 
     if (access.status !== 'ok') {
         return <LayoutPage>{access.component}</LayoutPage>;
@@ -156,7 +150,7 @@ export default function DashboardPage() {
                                 label: biz.name,
                                 value: biz.id,
                             }))}
-                            value={selectedBusiness || ''}
+                            value={selectedBusiness}
                             onChange={(val) => setSelectedBusiness(val)}
                         />
                     </div>

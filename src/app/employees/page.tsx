@@ -1,11 +1,16 @@
 'use client';
 
-import {useState, Fragment, ChangeEvent, FormEvent, useEffect} from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import {useState} from 'react';
 import {roles} from "@/types/types";
 import {supabase} from "../../../supabaseClient";
 import {useAccess} from "@/hooks/useAccess";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
+import {useAuth} from "@/context/AuthContext";
+import {Button} from "@/ui/button/Button";
+import {Popup} from "@/ui/popup/Popup";
+import {Input} from "@/ui/input/Input";
+import {Select} from "@/ui/select/Select";
+import Spinner from "@/ui/spinner/Spinner";
 
 interface Appointment {
     id: number;
@@ -36,8 +41,8 @@ const initialEmployees: Employee[] = [
         revenue: 45000,
         schedule: '10:00 - 18:00',
         appointments: [
-            { id: 101, time: '09:00–09:30', client: 'Анна' },
-            { id: 102, time: '11:00–12:00', client: 'Мария' }
+            {id: 101, time: '09:00–09:30', client: 'Анна'},
+            {id: 102, time: '11:00–12:00', client: 'Мария'}
         ],
     },
     {
@@ -50,7 +55,7 @@ const initialEmployees: Employee[] = [
         revenue: 39000,
         schedule: '12:00 - 20:00',
         appointments: [
-            { id: 201, time: '10:00–11:00', client: 'Ольга' }
+            {id: 201, time: '10:00–11:00', client: 'Ольга'}
         ],
     },
     {
@@ -67,24 +72,34 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
+    const {currentBusiness, user} = useAuth();
+    const userId = user?.id;
+    const [staffRole, setStaffRole] = useState<string>('all');
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
     const access = useAccess(roles.owner, roles.admin);
     const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
-
     const [isOpen, setIsOpen] = useState(false);
-    const [newEmp, setNewEmp] = useState<{
-        name: string;
-        role: 'Мастер' | 'Админ';
-        branch: string;
-    }>({
-        name: '',
-        role: 'Мастер',
-        branch: '',
-    });
-    
+
+    const fetchEmployees = async (businessId: string) => {
+        const {data, error} = await supabase
+            .from('employees')
+            .select('*')
+            .eq('business_id', businessId);
+
+        if (error) {
+            console.error('❌ Ошибка получения сотрудников:', error);
+            return;
+        }
+
+        console.log('Сотрудники (user_id):', data);
+    };
+
     const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
-        const { data, error } = await supabase
+        setLoading(true);
+        const {data, error} = await supabase
             .from('employee_invitations')
             .insert([
                 {
@@ -106,44 +121,20 @@ export default function EmployeesPage() {
             return null;
         }
 
-        const invitation = data[0]; // первая (и единственная) запись
+        const invitation = data[0];
 
-        // Сгенерируем ссылку для регистрации
         const inviteLink = `${process.env.NEXT_PUBLIC_URL}/registration?invite=${invitation.id}`;
 
         console.log('✅ Приглашение сотрудника создано:', invitation);
         console.log('🔗 Ссылка для регистрации:', inviteLink);
 
-        return { invitation, inviteLink };
-    };
+        return {invitation, inviteLink};
 
-    useEffect(() => {
-        inviteEmployee('seher62233@hedotu.com',"9dc40987-499e-4e91-bfe1-a23de034f94d", "70ad6536-f589-4925-bd89-043cc1fc1644")
-    }, []);
+        setLoading(false);
+    };
 
     const openModal = () => setIsOpen(true);
     const closeModal = () => setIsOpen(false);
-
-    const handleAdd = (e: FormEvent) => {
-        e.preventDefault();
-        const id = Date.now();
-        setEmployees([
-            ...employees,
-            {
-                id,
-                name: newEmp.name,
-                role: newEmp.role,
-                branch: newEmp.branch,
-                phone: '',
-                position: '',
-                revenue: 0,
-                schedule: '',
-                appointments: [],
-            }
-        ]);
-        setNewEmp({ name: '', role: 'Мастер', branch: '' });
-        closeModal();
-    };
 
     const handleDelete = (id: number) => {
         setEmployees(employees.filter(e => e.id !== id));
@@ -153,36 +144,40 @@ export default function EmployeesPage() {
         return <LayoutPage>{access.component}</LayoutPage>;
     }
 
+    const staffRoles = [
+        {id: 'all', role: 'Все сотрудники'},
+        {id: '1', role: 'Основатель'},
+        {id: '2', role: 'Менеджер'},
+        {id: '3', role: 'Сотрудник'},
+    ];
+
     return (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>
-                <button
-                    onClick={openModal}
-                    className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl"
-                >
-                    + Добавить сотрудника
-                </button>
+                <Button onClick={openModal}>
+                    Добавить сотрудника
+                </Button>
             </div>
 
-            {/* Поиск и фильтрация */}
-            <div className="mb-6 flex flex-wrap items-center gap-4">
-                <input
+            <div className="mb-6 flex gap-4">
+                <Input
                     type="text"
                     placeholder="Поиск по имени..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="px-4 py-2 rounded bg-purple-800 text-white placeholder-purple-400"
+                    setValue={setSearchTerm}
+                    transitionDelay={0.3}
                 />
-                <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as 'all' | 'Мастер' | 'Админ')}
-                    className="px-4 py-2 rounded bg-purple-800 text-white"
-                >
-                    <option value="all">Все роли</option>
-                    <option value="Мастер">Мастер</option>
-                    <option value="Админ">Админ</option>
-                </select>
+                <div className="w-64">
+                    <Select
+                        options={staffRoles.map(e => ({
+                            label: e.role,
+                            value: e.id,
+                        }))}
+                        value={staffRole}
+                        onChange={(val) => setStaffRole(val)}
+                    />
+                </div>
             </div>
 
             {/* Карточки сотрудников */}
@@ -222,80 +217,30 @@ export default function EmployeesPage() {
                     ))}
             </div>
 
-            {/* Модалка добавления */}
-            <Transition appear show={isOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-50" onClose={closeModal}>
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-black bg-opacity-25" />
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 flex items-center justify-center p-4">
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <Dialog.Panel className="w-full max-w-md bg-purple-900 p-6 rounded-2xl border border-purple-700">
-                                <Dialog.Title className="text-lg font-medium text-white mb-4">
-                                    Добавить сотрудника
-                                </Dialog.Title>
-                                <form onSubmit={handleAdd} className="space-y-4">
-                                    <input
-                                        type="text"
-                                        placeholder="Имя"
-                                        value={newEmp.name}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                            setNewEmp({ ...newEmp, name: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 bg-purple-800 rounded text-white"
-                                        required
-                                    />
-                                    <select
-                                        value={newEmp.role}
-                                        onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                                            setNewEmp({ ...newEmp, role: e.target.value as 'Мастер' | 'Админ' })
-                                        }
-                                        className="w-full px-3 py-2 bg-purple-800 rounded text-white"
-                                    >
-                                        <option value="Мастер">Мастер</option>
-                                        <option value="Админ">Админ</option>
-                                    </select>
-                                    <input
-                                        type="text"
-                                        placeholder="Филиал"
-                                        value={newEmp.branch}
-                                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                            setNewEmp({ ...newEmp, branch: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 bg-purple-800 rounded text-white"
-                                        required
-                                    />
-                                    <div className="flex justify-end gap-2">
-                                        <button type="button" onClick={closeModal} className="px-4 py-2 bg-gray-600 rounded">
-                                            Отмена
-                                        </button>
-                                        <button type="submit" className="px-4 py-2 bg-purple-700 rounded">
-                                            Добавить
-                                        </button>
-                                    </div>
-                                </form>
-                            </Dialog.Panel>
-                        </Transition.Child>
-                    </div>
-                </Dialog>
-            </Transition>
+            {isOpen &&
+                <Popup title='Добавление сотрудника'>
+                    <Input
+                        type="email"
+                        placeholder="Email сотрудника"
+                        value={email}
+                        setValue={setEmail}
+                        transitionDelay={0.3}
+                    />
+                    {!loading ?
+                        <div className="flex justify-between">
+                            <Button
+                                loading={loading}
+                                onClick={() => inviteEmployee(email, currentBusiness, userId)}
+                            >
+                                Сгенерировать ссылку
+                            </Button>
+                            <Button onClick={closeModal}>
+                                Отмена
+                            </Button>
+                        </div>
+                        : <Spinner/>}
+                </Popup>
+            }
         </div>
     );
 }

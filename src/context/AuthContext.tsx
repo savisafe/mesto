@@ -15,6 +15,8 @@ interface AuthContextType {
     setAccessToken: (token: string | null) => void;
     businessesData: any[];
     setBusinessesData: (businesses: any[]) => void;
+    setCurrentBusinesses: (businesses: any[]) => void;
+    currentBusiness: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,16 +29,20 @@ const AuthContext = createContext<AuthContextType>({
     setAccessToken: () => {},
     businessesData: [],
     setBusinessesData: () => {},
+    setCurrentBusinesses: () => {},
+    currentBusiness: ''
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const defaultName = 'Пользователь';
     const pathname = usePathname();
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<UserMetadata | null>(null);
-    const [userName, setUserName] = useState('Пользователь');
+    const [userName, setUserName] = useState(defaultName);
     const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [businessesData, setBusinessesData] = useState<any[]>([]);
+    const [currentBusiness, setCurrentBusiness] = useState<string>('');
 
     useEffect(() => {
         const initSession = async () => {
@@ -46,12 +52,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (session) {
                 setAccessToken(session.access_token);
                 setUser(session.user || null);
-                setUserName(session.user?.user_metadata?.name || 'Пользователь');
+                setUserName(session.user?.user_metadata?.name || defaultName);
                 setRole(session.user?.user_metadata?.role || null);
             } else {
                 setAccessToken(null);
                 setUser(null);
-                setUserName('Пользователь');
+                setUserName(defaultName);
                 setRole(null);
                 setBusinessesData([]);
             }
@@ -64,13 +70,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (session?.access_token) {
                 setAccessToken(session.access_token);
                 setUser(session.user || null);
-                setUserName(session.user?.user_metadata?.name || 'Пользователь');
+                setUserName(session.user?.user_metadata?.name || defaultName);
                 setRole(session.user?.user_metadata?.role || null);
             } else {
-                // Пользователь вышел
                 setAccessToken(null);
                 setUser(null);
-                setUserName('Пользователь');
+                setUserName(defaultName);
                 setRole(null);
                 setBusinessesData([]);
             }
@@ -89,6 +94,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('user_id', user.id)
                 .then(({ data: businesses }) => {
                     setBusinessesData(businesses || []);
+                    if (businesses && businesses.length > 0) {
+                        setCurrentBusiness(businesses[0].id);
+                    }
                 });
         }
     }, [user, pathname]);
@@ -105,6 +113,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 businessesData,
                 setBusinessesData,
                 userName,
+                setCurrentBusinesses: () => {},
+                currentBusiness
             }}
         >
             {children}

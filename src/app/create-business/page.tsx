@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 export default function CreateBusinessPage() {
     const alert = useNotification();
     const {user, role} = useAuth();
-    const access = useAccess(roles.owner);
+    const access = useAccess(roles.owner, roles.admin);
     const [businessName, setBusinessName] = useState('');
     //TODO протипизировать any
     const [businesses, setBusinesses] = useState<any[]>([]);

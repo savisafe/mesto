@@ -19,7 +19,9 @@ export const Select = ({ options, value, onChange }: SelectProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const selectRef = useRef<HTMLDivElement>(null);
 
-    const selectedLabel = options.find(option => option.value === value)?.label || '';
+    const selectedLabel = options.find(option => option.value === value?.toString())?.label || '';
+
+    console.log(selectedLabel)
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
