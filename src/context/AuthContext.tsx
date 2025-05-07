@@ -13,9 +13,9 @@ interface AuthContextType {
     setUser: (user: UserMetadata | null) => void;
     loading: boolean;
     setAccessToken: (token: string | null) => void;
-    businessesData: any[];
-    setBusinessesData: (businesses: any[]) => void;
-    setCurrentBusinesses: (businesses: any[]) => void;
+    businessesData: unknown[];
+    setBusinessesData: (businesses: unknown[]) => void;
+    setCurrentBusinesses: (businesses: unknown[]) => void;
     currentBusiness: string;
 }
 
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [userName, setUserName] = useState(defaultName);
     const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [businessesData, setBusinessesData] = useState<any[]>([]);
+    const [businessesData, setBusinessesData] = useState<unknown[]>([]);
     const [currentBusiness, setCurrentBusiness] = useState<string>('');
 
     useEffect(() => {
