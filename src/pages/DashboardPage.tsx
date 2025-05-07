@@ -1,17 +1,12 @@
 'use client';
 
 import {useState} from 'react';
-import {EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
+import {Business, EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
 import {useAuth} from "@/context/AuthContext";
 import {Select} from "@/ui/select/Select";
 import {WidgetCard} from "@/ui/widget-card/WidgetCard";
-
-interface Business {
-    id: string;
-    name: string;
-}
 
 //TODO раскидать моки когда будет понятна структура данных
 const recordsToday = 7;

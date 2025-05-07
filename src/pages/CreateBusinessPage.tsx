@@ -6,17 +6,12 @@ import {useEffect, useState} from "react";
 import {Button} from "@/ui/button/Button";
 import {supabase} from "../../supabaseClient";
 import {useAccess} from "@/hooks/useAccess";
-import {roles} from "@/types/types";
+import {Business, roles} from "@/types/types";
 import {Popup} from "@/ui/popup/Popup";
 import {useAuth} from "@/context/AuthContext";
 import {useNotification} from "@/context/NotificationContext";
 import Spinner from "@/ui/spinner/Spinner";
 import { motion } from "framer-motion";
-
-interface Business {
-    id: string;
-    name: string;
-}
 
 export default function CreateBusinessPage() {
     const alert = useNotification();
