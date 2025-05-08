@@ -12,6 +12,8 @@ import {Select} from "@/ui/select/Select";
 import Spinner from "@/ui/spinner/Spinner";
 import {supabase} from "../../supabaseClient";
 import {useBusiness} from "@/contexts/BusinessContext";
+import {useNotification} from "@/contexts/NotificationContext";
+import {MessageCircle, Send} from "lucide-react";
 
 interface Appointment {
     id: number;
@@ -73,6 +75,7 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
+    const alert = useNotification();
     const {user} = useAuth();
     const {currentBusiness} = useBusiness();
     const userId = user?.id;
@@ -84,6 +87,7 @@ export default function EmployeesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
     const [isOpen, setIsOpen] = useState(false);
+    const [inviteLink, setInviteLink] = useState('');
 
     // const fetchEmployees = async (businessId: string) => {
     //     const {data, error} = await supabase
@@ -92,7 +96,7 @@ export default function EmployeesPage() {
     //         .eq('business_id', businessId);
     //
     //     if (error) {
-    //         console.error('❌ Ошибка получения сотрудников:', error);
+    //         alert('error', 'Ошибка получения сотрудников');
     //         return;
     //     }
     //
@@ -100,43 +104,50 @@ export default function EmployeesPage() {
     // };
 
     const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
-        setLoading(true);
-        const {data, error} = await supabase
-            .from('employee_invitations')
-            .insert([
-                {
-                    email: email,
-                    business_id: businessId,
-                    invited_by: inviterId,
-                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 часа
-                }
-            ])
-            .select('*');
+        if (email.length === 0) return alert('error', 'Введите email сотрудника');
+        try {
+            setLoading(true);
 
-        if (error) {
-            console.error('❌ Ошибка приглашения сотрудника:', error);
-            return null;
+            const {data, error} = await supabase
+                .from('employee_invitations')
+                .insert([
+                    {
+                        email,
+                        business_id: businessId,
+                        invited_by: inviterId,
+                        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    },
+                ])
+                .select('*');
+
+            if (error) {
+                alert('error', 'Ошибка приглашения сотрудника');
+                return null;
+            }
+
+            if (!data || data.length === 0) {
+                alert('error', 'Приглашение не создано');
+                return null;
+            }
+
+            const invitation = data[0];
+            const link = `${process.env.NEXT_PUBLIC_URL}/registration?invite=${invitation.id}`;
+
+            setInviteLink(link);
+            alert('success', 'Приглашение сотрудника создано');
+
+            return {invitation, inviteLink: link};
+        } finally {
+            setLoading(false);
         }
-
-        if (!data || data.length === 0) {
-            console.error('❌ Приглашение не создано');
-            return null;
-        }
-
-        const invitation = data[0];
-
-        const inviteLink = `${process.env.NEXT_PUBLIC_URL}/registration?invite=${invitation.id}`;
-
-        console.log('✅ Приглашение сотрудника создано:', invitation);
-        console.log('🔗 Ссылка для регистрации:', inviteLink);
-
-        return {invitation, inviteLink};
-
-        setLoading(false);
     };
 
     const openModal = () => setIsOpen(true);
-    const closeModal = () => setIsOpen(false);
+    const closeModal = () => {
+        setEmail('');
+        setInviteLink('');
+        setIsOpen(false);
+    }
 
     const handleDelete = (id: number) => {
         setEmployees(employees.filter(e => e.id !== id));
@@ -157,9 +168,11 @@ export default function EmployeesPage() {
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>
-                <Button onClick={openModal}>
-                    Добавить сотрудника
-                </Button>
+                <div className="w-1/4">
+                    <Button onClick={openModal}>
+                        Добавить сотрудника
+                    </Button>
+                </div>
             </div>
 
             <div className="mb-6 flex gap-4">
@@ -221,26 +234,66 @@ export default function EmployeesPage() {
 
             {isOpen &&
                 <Popup title='Добавление сотрудника'>
-                    <Input
-                        type="email"
-                        placeholder="Email сотрудника"
-                        value={email}
-                        setValue={setEmail}
-                        transitionDelay={0.3}
-                    />
-                    {!loading ?
-                        <div className="flex justify-between">
-                            <Button
-                                loading={loading}
-                                onClick={() => inviteEmployee(email, currentBusiness, userId)}
-                            >
-                                Сгенерировать ссылку
-                            </Button>
-                            <Button onClick={closeModal}>
-                                Отмена
-                            </Button>
+                    {inviteLink.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="mb-2">🔗 Ссылка для регистрации:</div>
+                            <Input type="text" value={inviteLink} showCopyButton={true} setValue={() => {}} />
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={() => {
+                                        const text = `Привет! Вот ссылка для регистрации`;
+                                        const url = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(text)}`;
+                                        window.open(url, '_blank');
+                                    }}
+                                    className="cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#229ED9] text-white font-semibold hover:bg-opacity-90 transition"
+                                >
+                                    <Send size={18} />
+                                    Telegram
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        const text = `Привет! Вот ссылка для регистрации`;
+                                        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                                        window.open(url, '_blank');
+                                    }}
+                                    className="cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white font-semibold hover:bg-opacity-90 transition"
+                                >
+                                    <MessageCircle size={18} />
+                                    WhatsApp
+                                </button>
+                            </div>
+
+                            <div className="mx-auto w-full text-center">
+                                <Button onClick={closeModal}>Назад</Button>
+                            </div>
                         </div>
-                        : <Spinner/>}
+                    ) : (
+                        <>
+                            <Input
+                                type="email"
+                                placeholder="Email сотрудника"
+                                value={email}
+                                setValue={setEmail}
+                                transitionDelay={0.3}
+                            />
+                            {!loading ? (
+                                <div className="flex justify-between gap-4">
+                                    <Button
+                                        loading={loading}
+                                        onClick={() => inviteEmployee(email, currentBusiness, userId)}
+                                    >
+                                        Сгенерировать ссылку
+                                    </Button>
+                                    <Button onClick={closeModal}>Отмена</Button>
+                                </div>
+                            ) : (
+                                <Spinner />
+                            )}
+                        </>
+                    )}
+
                 </Popup>
             }
         </div>

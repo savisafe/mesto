@@ -14,7 +14,7 @@ export const Button = ({ onClick, loading, children, transitionDelay }: ButtonPr
         <motion.button
             onClick={onClick}
             disabled={loading}
-            className="cursor-pointer w-fit p-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
+            className="cursor-pointer w-full p-3 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl transition disabled:opacity-50"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: transitionDelay }}
