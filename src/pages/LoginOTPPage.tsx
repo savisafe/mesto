@@ -7,7 +7,7 @@ import {motion} from 'framer-motion';
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
 import {Button} from "@/ui/button/Button";
-import {useNotification} from "@/context/NotificationContext";
+import {useNotification} from "@/contexts/NotificationContext";
 
 export default function LoginOTPPage() {
     const alert = useNotification();

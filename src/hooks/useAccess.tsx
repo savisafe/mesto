@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import Spinner from "@/ui/spinner/Spinner";
 import { routes } from "@/routes/routes";
 

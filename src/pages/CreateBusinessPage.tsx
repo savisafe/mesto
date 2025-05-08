@@ -8,8 +8,8 @@ import {supabase} from "../../supabaseClient";
 import {useAccess} from "@/hooks/useAccess";
 import {Business, roles} from "@/types/types";
 import {Popup} from "@/ui/popup/Popup";
-import {useAuth} from "@/context/AuthContext";
-import {useNotification} from "@/context/NotificationContext";
+import {useAuth} from "@/contexts/AuthContext";
+import {useNotification} from "@/contexts/NotificationContext";
 import Spinner from "@/ui/spinner/Spinner";
 import { motion } from "framer-motion";
 

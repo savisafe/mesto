@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from "../../supabaseClient";
 import { UserMetadata } from "@supabase/auth-js";
-import { usePathname } from "next/navigation";
 
 interface AuthContextType {
     accessToken: string | null;
@@ -13,10 +12,6 @@ interface AuthContextType {
     setUser: (user: UserMetadata | null) => void;
     loading: boolean;
     setAccessToken: (token: string | null) => void;
-    businessesData: unknown[];
-    setBusinessesData: (businesses: unknown[]) => void;
-    setCurrentBusinesses: (businesses: unknown[]) => void;
-    currentBusiness: string;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -27,22 +22,15 @@ const AuthContext = createContext<AuthContextType>({
     setUser: () => {},
     loading: true,
     setAccessToken: () => {},
-    businessesData: [],
-    setBusinessesData: () => {},
-    setCurrentBusinesses: () => {},
-    currentBusiness: ''
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const defaultName = 'Пользователь';
-    const pathname = usePathname();
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<UserMetadata | null>(null);
     const [userName, setUserName] = useState(defaultName);
     const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [businessesData, setBusinessesData] = useState<unknown[]>([]);
-    const [currentBusiness, setCurrentBusiness] = useState<string>('');
 
     useEffect(() => {
         const initSession = async () => {
@@ -59,7 +47,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(null);
                 setUserName(defaultName);
                 setRole(null);
-                setBusinessesData([]);
             }
             setLoading(false);
         };
@@ -77,7 +64,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(null);
                 setUserName(defaultName);
                 setRole(null);
-                setBusinessesData([]);
             }
         });
 
@@ -85,21 +71,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             listener.subscription.unsubscribe();
         };
     }, []);
-
-    useEffect(() => {
-        if (user) {
-            supabase
-                .from('businesses')
-                .select('*')
-                .eq('user_id', user.id)
-                .then(({ data: businesses }) => {
-                    setBusinessesData(businesses || []);
-                    if (businesses && businesses.length > 0) {
-                        setCurrentBusiness(businesses[0].id);
-                    }
-                });
-        }
-    }, [user, pathname]);
 
     return (
         <AuthContext.Provider
@@ -110,11 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser,
                 loading,
                 role,
-                businessesData,
-                setBusinessesData,
-                userName,
-                setCurrentBusinesses: () => {},
-                currentBusiness
+                userName
             }}
         >
             {children}

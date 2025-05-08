@@ -4,9 +4,10 @@ import {useState} from 'react';
 import {Business, EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
-import {useAuth} from "@/context/AuthContext";
+import {useAuth} from "@/contexts/AuthContext";
 import {Select} from "@/ui/select/Select";
 import {WidgetCard} from "@/ui/widget-card/WidgetCard";
+import {useBusiness} from "@/contexts/BusinessContext";
 
 //TODO раскидать моки когда будет понятна структура данных
 const recordsToday = 7;
@@ -28,7 +29,7 @@ const recentReviews: Review[] = [
 ];
 
 export default function DashboardPage() {
-    const {businessesData, currentBusiness} = useAuth() as { businessesData: Business[], currentBusiness: string };
+    const {businessesData, currentBusiness} = useBusiness() as { businessesData: Business[], currentBusiness: string };
     const [selectedBusiness, setSelectedBusiness] = useState<string>(currentBusiness);
     const access = useAccess(roles.owner, roles.admin);
 

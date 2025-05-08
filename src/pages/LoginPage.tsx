@@ -4,12 +4,12 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {supabase} from '../../supabaseClient';
 import {routes} from '@/routes/routes';
-import {useAuth} from '@/context/AuthContext';
+import {useAuth} from '@/contexts/AuthContext';
 import {motion} from 'framer-motion';
 import {Input} from "@/ui/input/Input";
 import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
-import {useNotification} from "@/context/NotificationContext";
+import {useNotification} from "@/contexts/NotificationContext";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {roles} from "@/types/types";
 

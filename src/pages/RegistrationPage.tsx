@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { Button } from "@/ui/button/Button";
 import { Input } from "@/ui/input/Input";
 import { Popup } from "@/ui/popup/Popup";
-import { useNotification } from "@/context/NotificationContext";
+import { useNotification } from "@/contexts/NotificationContext";
 import { roles } from "@/types/types";
 import Link from "next/link";
 import {supabase} from "../../supabaseClient";

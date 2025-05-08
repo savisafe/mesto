@@ -4,13 +4,14 @@ import {useState} from 'react';
 import {roles} from "@/types/types";
 import {useAccess} from "@/hooks/useAccess";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
-import {useAuth} from "@/context/AuthContext";
+import {useAuth} from "@/contexts/AuthContext";
 import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
 import {Select} from "@/ui/select/Select";
 import Spinner from "@/ui/spinner/Spinner";
 import {supabase} from "../../supabaseClient";
+import {useBusiness} from "@/contexts/BusinessContext";
 
 interface Appointment {
     id: number;
@@ -72,7 +73,8 @@ const initialEmployees: Employee[] = [
 ];
 
 export default function EmployeesPage() {
-    const {currentBusiness, user} = useAuth();
+    const {user} = useAuth();
+    const {currentBusiness} = useBusiness();
     const userId = user?.id;
     const [staffRole, setStaffRole] = useState<string>('all');
     const [email, setEmail] = useState('');
