@@ -89,10 +89,6 @@ export default function EmployeesPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [inviteLink, setInviteLink] = useState('');
 
-    useEffect(() => {
-        fetchEmployees(currentBusiness);
-    }, []);
-
     const fetchEmployees = async (businessId: string) => {
         const {data, error} = await supabase
             .from('employees')
@@ -106,6 +102,12 @@ export default function EmployeesPage() {
 
         console.log(data);
     };
+
+    useEffect(() => {
+        if (currentBusiness?.length > 0) {
+            fetchEmployees(currentBusiness);
+        }
+    }, [currentBusiness]);
 
     const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
         if (email.length === 0) return alert('error', 'Введите email сотрудника');
@@ -258,7 +260,7 @@ export default function EmployeesPage() {
 
                                 <button
                                     onClick={() => {
-                                        const text = `Привет! Вот ссылка для регистрации`;
+                                        const text = `Привет! Вот ссылка для регистрации ${inviteLink}`;
                                         const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
                                         window.open(url, '_blank');
                                     }}

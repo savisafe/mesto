@@ -21,8 +21,6 @@ export const Select = ({ options, value, onChange }: SelectProps) => {
 
     const selectedLabel = options.find(option => option.value === value?.toString())?.label || '';
 
-    console.log(selectedLabel)
-
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
