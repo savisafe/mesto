@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {roles} from "@/types/types";
 import {useAccess} from "@/hooks/useAccess";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
@@ -89,19 +89,23 @@ export default function EmployeesPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [inviteLink, setInviteLink] = useState('');
 
-    // const fetchEmployees = async (businessId: string) => {
-    //     const {data, error} = await supabase
-    //         .from('employees')
-    //         .select('*')
-    //         .eq('business_id', businessId);
-    //
-    //     if (error) {
-    //         alert('error', 'Ошибка получения сотрудников');
-    //         return;
-    //     }
-    //
-    //     console.log('Сотрудники (user_id):', data);
-    // };
+    useEffect(() => {
+        fetchEmployees(currentBusiness);
+    }, []);
+
+    const fetchEmployees = async (businessId: string) => {
+        const {data, error} = await supabase
+            .from('employees')
+            .select('*')
+            .eq('business_id', businessId);
+
+        if (error) {
+            alert('error', 'Ошибка получения сотрудников');
+            return;
+        }
+
+        console.log(data);
+    };
 
     const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
         if (email.length === 0) return alert('error', 'Введите email сотрудника');
@@ -131,7 +135,7 @@ export default function EmployeesPage() {
             }
 
             const invitation = data[0];
-            const link = `${process.env.NEXT_PUBLIC_URL}/registration?invite=${invitation.id}`;
+            const link = `${window.location.origin}/registration?invite=${invitation.id}`;
 
             setInviteLink(link);
             alert('success', 'Приглашение сотрудника создано');
