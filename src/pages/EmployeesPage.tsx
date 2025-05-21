@@ -170,6 +170,8 @@ export default function EmployeesPage() {
         {id: '3', role: 'Сотрудник'},
     ];
 
+    console.log(currentBusiness)
+
     return (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
             <div className="flex justify-between items-center mb-6">

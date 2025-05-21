@@ -199,7 +199,7 @@ export default function CreateBusinessPage() {
                         {businesses.map((biz) => (
                             <div key={biz?.id} className="p-4 border rounded shadow flex justify-between items-center">
                                 <span className="font-medium">{biz?.name}</span>
-                                <div className="flex gap-2">
+                                <div className="flex flex-col md:flex-row gap-4">
                                     <Button onClick={() => openEditBusiness(biz)}>
                                         ✏️ Редактировать
                                     </Button>
