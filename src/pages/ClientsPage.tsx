@@ -155,7 +155,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Пагинация с первым, последним и тремя вокруг */}
-            <div className="flex justify-center space-x-2 mb-6 mt-[25px]">
+            <div className="flex justify-center space-x-2 mb-6 mt-[25px] lg:mt-0 ">
                 {/* Кнопка начала */}
                 <button
                     onClick={() => handlePageChange(1)}

@@ -155,7 +155,7 @@ export default function CreateBusinessPage() {
                         value={businessName}
                         setValue={setBusinessName}
                     />
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-4">
                         <Button onClick={handleCreateBusiness}>
                             Создать бизнес
                         </Button>
