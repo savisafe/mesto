@@ -16,10 +16,9 @@ export default function HomePage() {
     };
 
     return (
-        <div className="space-y-32">
+        <div className="bg-gradient-to-br from-purple-950 to-black">
             {/* Hero */}
-            <section className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-purple-950 to-black text-white text-center px-4">
-                <motion.h1
+            <section className="min-h-screen flex flex-col justify-center items-center text-white text-center px-4">                <motion.h1
                     className="text-4xl md:text-5xl font-bold mb-4"
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
@@ -66,7 +65,7 @@ export default function HomePage() {
             </section>
 
             {/* Screenshots placeholder */}
-            <section className="py-16 bg-gray-50 px-4">
+            <section className="py-4 bg-white px-4">
                 <h2 className="text-3xl font-extrabold text-center mb-8 text-gray-900">Интерфейс</h2>
                 <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {['Календарь', 'Запись клиента', 'Финансы', 'Отзывы', 'Сотрудники', 'Уведомления'].map((label, i) => (
