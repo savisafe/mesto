@@ -174,9 +174,9 @@ export default function EmployeesPage() {
 
     return (
         <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 gap-2">
                 <h1 className="text-3xl font-bold">Сотрудники</h1>
-                <div className="w-1/4">
+                <div className="max-w-[250px] min-w-[100px]">
                     <Button onClick={openModal}>
                         Добавить сотрудника
                     </Button>
