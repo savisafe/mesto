@@ -1,12 +1,13 @@
 'use client';
 
 import {useState} from 'react';
-import {Business, EmployeeStatus, RecordEntry, Review, roles} from "@/types/types";
+import {Business, EmployeeStatus, RecordEntry, Review} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
 import {Select} from "@/ui/select/Select";
 import {WidgetCard} from "@/ui/widget-card/WidgetCard";
 import {useBusiness} from "@/contexts/BusinessContext";
+import {roles} from "@/lib/apiClient";
 
 //TODO раскидать моки когда будет понятна структура данных
 const recordsToday = 7;
@@ -88,7 +89,7 @@ export default function DashboardPage() {
             buttonText: 'Перейти'
         },
         {
-            id: 'create-business', title: 'Мои бизнесы',
+            id: 'my-business', title: 'Мои бизнесы',
             content: (
                 <ul className="flex flex-col gap-3">
                     {businessesData.map((b) => (
@@ -98,7 +99,7 @@ export default function DashboardPage() {
                     ))}
                 </ul>
             ),
-            link: '/create-business',
+            link: '/my-business',
             buttonText: 'Перейти'
         },
         {

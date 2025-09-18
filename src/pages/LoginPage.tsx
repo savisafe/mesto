@@ -2,7 +2,6 @@
 
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {supabase} from '../../supabaseClient';
 import {routes} from '@/routes/routes';
 import {useAuth} from '@/contexts/AuthContext';
 import {motion} from 'framer-motion';
@@ -11,35 +10,41 @@ import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
 import {useNotification} from "@/contexts/NotificationContext";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
-import {roles} from "@/types/types";
 
 export default function LoginPage() {
     const router = useRouter()
-    const {setAccessToken} = useAuth();
+    const {login} = useAuth();
     const alert = useNotification();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
-        setLoading(true);
-        const {data, error} = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-        if (error) {
-            //TODO переводить ошибки
-            alert('error', error.message);
-        } else {
-            setAccessToken(data.session.access_token);
-            const role = data?.user?.user_metadata?.role
-            if (role === roles.employee || role === roles.manager) {
-                router.replace(routes.CALENDAR)
-            } else {
-                router.replace(routes.DASHBOARD)
-            }
+        if (!email || !password) {
+            alert('error', 'Заполните все поля');
+            return;
         }
-        setLoading(false);
+
+        setLoading(true);
+        
+        try {
+            const result = await login({ email, password });
+            
+            if (result.success) {
+                alert('success', 'Успешный вход в систему');
+                
+                // Даём время на обновление контекста, затем перенаправляем
+                setTimeout(() => {
+                    router.replace(routes.DASHBOARD);
+                }, 100);
+            } else {
+                alert('error', result.error || 'Ошибка входа');
+            }
+        } catch {
+            alert('error', 'Произошла ошибка при входе');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -68,7 +73,7 @@ export default function LoginPage() {
                         loading={loading}
                         transitionDelay={0.45}
                     >
-                        Войти  в систему
+                        Войти в систему
                     </Button>
                 </div>
 

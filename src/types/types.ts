@@ -1,15 +1,5 @@
 import {JSX} from "react";
 
-export type Role = 'admin' | 'owner' | 'manager' | 'employee' | 'client';
-
-export const roles: Record<Role, Role> = {
-    admin: 'admin',
-    owner: 'owner',
-    manager: 'manager',
-    employee: 'employee',
-    client: 'client'
-};
-
 export interface Business {
     id: string;
     name: string;

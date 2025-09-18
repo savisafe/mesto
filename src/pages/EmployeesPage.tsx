@@ -1,17 +1,12 @@
 'use client';
 
-import {useEffect, useState} from 'react';
-import {roles} from "@/types/types";
+import {useState} from 'react';
 import {useAccess} from "@/hooks/useAccess";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
-import {useAuth} from "@/contexts/AuthContext";
 import {Button} from "@/ui/button/Button";
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
 import {Select} from "@/ui/select/Select";
-import Spinner from "@/ui/spinner/Spinner";
-import {supabase} from "../../supabaseClient";
-import {useBusiness} from "@/contexts/BusinessContext";
 import {useNotification} from "@/contexts/NotificationContext";
 import {MessageCircle, Send} from "lucide-react";
 
@@ -50,260 +45,220 @@ const initialEmployees: Employee[] = [
     },
     {
         id: 2,
-        name: 'Виктория',
-        phone: '+77771112233',
-        position: 'Лешмейкер',
-        branch: 'Филиал 2',
+        name: 'Анна',
+        phone: '+77770000001',
+        position: 'Мастер маникюра',
+        branch: 'Филиал 1',
         role: 'Мастер',
-        revenue: 39000,
-        schedule: '12:00 - 20:00',
+        revenue: 38000,
+        schedule: '09:00 - 17:00',
         appointments: [
-            {id: 201, time: '10:00–11:00', client: 'Ольга'}
+            {id: 201, time: '10:00–11:00', client: 'Елена'},
+            {id: 202, time: '14:00–15:00', client: 'Ольга'}
         ],
     },
     {
         id: 3,
-        name: 'Елена',
-        phone: '+77772223344',
+        name: 'Мария',
+        phone: '+77770000002',
         position: 'Администратор',
         branch: 'Филиал 1',
         role: 'Админ',
-        revenue: 0,
-        schedule: '09:00 - 17:00',
+        revenue: 25000,
+        schedule: '08:00 - 20:00',
         appointments: [],
-    }
+    },
 ];
 
 export default function EmployeesPage() {
     const alert = useNotification();
-    const {user} = useAuth();
-    const {currentBusiness} = useBusiness();
-    const userId = user?.id;
-    const [staffRole, setStaffRole] = useState<string>('all');
-    const [email, setEmail] = useState('');
-    const [loading, setLoading] = useState(false);
-    const access = useAccess(roles.owner, roles.admin);
-    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const {hasAccess} = useAccess();
+    const [employees] = useState<Employee[]>(initialEmployees);
+    const [loading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [roleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
+    const [roleFilter, setRoleFilter] = useState<'all' | 'Мастер' | 'Админ'>('all');
     const [isOpen, setIsOpen] = useState(false);
     const [inviteLink, setInviteLink] = useState('');
+    const [email, setEmail] = useState('');
 
-    const fetchEmployees = async (businessId: string) => {
-        const {data, error} = await supabase
-            .from('employees')
-            .select('*')
-            .eq('business_id', businessId);
-
-        if (error) {
-            alert('error', 'Ошибка получения сотрудников');
-            return;
-        }
-
-        console.log(data);
-    };
-
-    useEffect(() => {
-        if (currentBusiness?.length > 0) {
-            fetchEmployees(currentBusiness);
-        }
-    }, [currentBusiness]);
-
-    const inviteEmployee = async (email: string, businessId: string, inviterId: string) => {
-        if (email.length === 0) return alert('error', 'Введите email сотрудника');
-        try {
-            setLoading(true);
-
-            const {data, error} = await supabase
-                .from('employee_invitations')
-                .insert([
-                    {
-                        email,
-                        business_id: businessId,
-                        invited_by: inviterId,
-                        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                    },
-                ])
-                .select('*');
-
-            if (error) {
-                alert('error', 'Ошибка приглашения сотрудника');
-                return null;
-            }
-
-            if (!data || data.length === 0) {
-                alert('error', 'Приглашение не создано');
-                return null;
-            }
-
-            const invitation = data[0];
-            const link = `${window.location.origin}/registration?invite=${invitation.id}`;
-
-            setInviteLink(link);
-            alert('success', 'Приглашение сотрудника создано');
-
-            return {invitation, inviteLink: link};
-        } finally {
-            setLoading(false);
-        }
-    };
+    const filteredEmployees = employees.filter(employee => {
+        const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             employee.phone.includes(searchTerm) ||
+                             employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = roleFilter === 'all' || employee.role === roleFilter;
+        return matchesSearch && matchesRole;
+    });
 
     const openModal = () => setIsOpen(true);
     const closeModal = () => {
         setEmail('');
         setInviteLink('');
         setIsOpen(false);
-    }
-
-    const handleDelete = (id: number) => {
-        setEmployees(employees.filter(e => e.id !== id));
     };
 
-    if (access.status !== 'ok') {
-        return <LayoutPage>{access.component}</LayoutPage>;
+    const copyInviteLink = () => {
+        if (inviteLink) {
+            navigator.clipboard.writeText(inviteLink);
+            alert('success', 'Ссылка скопирована в буфер обмена');
+        }
+    };
+
+    if (!hasAccess) {
+        return (
+            <LayoutPage>
+                <div className="text-center text-red-400">
+                    У вас нет доступа к этой странице
+                </div>
+            </LayoutPage>
+        );
     }
 
-    const staffRoles = [
-        {id: 'all', role: 'Все сотрудники'},
-        {id: '1', role: 'Основатель'},
-        {id: '2', role: 'Менеджер'},
-        {id: '3', role: 'Сотрудник'},
-    ];
-
-    console.log(currentBusiness)
-
     return (
-        <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold">Сотрудники</h1>
-                <div className="w-1/4">
+        <LayoutPage>
+            <div className="max-w-6xl mx-auto">
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-white">Сотрудники</h1>
                     <Button onClick={openModal}>
-                        Добавить сотрудника
+                        Пригласить сотрудника
                     </Button>
                 </div>
-            </div>
 
-            <div className="mb-6 flex gap-4">
-                <Input
-                    type="text"
-                    placeholder="Поиск по имени..."
-                    value={searchTerm}
-                    setValue={setSearchTerm}
-                    transitionDelay={0.3}
-                />
-                <div className="w-64">
+                {/* Фильтры */}
+                <div className="flex gap-4 mb-6">
+                    <Input
+                        type="text"
+                        placeholder="Поиск по имени, телефону или должности"
+                        value={searchTerm}
+                        setValue={setSearchTerm}
+                    />
                     <Select
-                        options={staffRoles.map(e => ({
-                            label: e.role,
-                            value: e.id,
-                        }))}
-                        value={staffRole}
-                        onChange={(val) => setStaffRole(val)}
+                        value={roleFilter}
+                        onChange={(value) => setRoleFilter(value as 'all' | 'Мастер' | 'Админ')}
+                        options={[
+                            {value: 'all', label: 'Все роли'},
+                            {value: 'Мастер', label: 'Мастер'},
+                            {value: 'Админ', label: 'Админ'}
+                        ]}
                     />
                 </div>
-            </div>
 
-            {/* Карточки сотрудников */}
-            <div className="flex space-x-6 overflow-x-auto pb-4">
-                {employees
-                    .filter(emp =>
-                        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                        (roleFilter === 'all' || emp.role === roleFilter)
-                    )
-                    .map(emp => (
-                        <div
-                            key={emp.id}
-                            className="flex-shrink-0 w-64 bg-purple-800 bg-opacity-30 border border-purple-700 p-4 rounded-xl"
-                        >
-                            <div className="flex justify-between items-center mb-2">
-                                <h2 className="text-xl font-semibold">{emp.name}</h2>
-                                <button
-                                    onClick={() => handleDelete(emp.id)}
-                                    className="text-red-500 hover:text-red-400"
-                                >
-                                    ✕
-                                </button>
+                {/* Список сотрудников */}
+                <div className="grid gap-4">
+                    {filteredEmployees.map(employee => (
+                        <div key={employee.id} className="bg-purple-800 bg-opacity-30 border border-purple-700 rounded-lg p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-xl font-semibold text-white">{employee.name}</h3>
+                                    <p className="text-purple-300">{employee.position}</p>
+                                    <p className="text-purple-400 text-sm">{employee.phone}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className={`px-3 py-1 rounded-full text-sm ${
+                                        employee.role === 'Мастер' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-purple-600 text-white'
+                                    }`}>
+                                        {employee.role}
+                                    </span>
+                                    <p className="text-green-400 font-semibold mt-2">
+                                        {employee.revenue.toLocaleString()} ₽
+                                    </p>
+                                </div>
                             </div>
-                            <p className="text-sm text-purple-300 mb-1">Роль: {emp.role}</p>
-                            <p className="text-sm text-purple-300 mb-2">Филиал: {emp.branch}</p>
-                            <h3 className="text-lg font-medium mb-1">День сотрудника</h3>
-                            {emp.appointments.length > 0 ? (
-                                <ul className="space-y-1 text-sm">
-                                    {emp.appointments.map(a => (
-                                        <li key={a.id}>• {a.time} — {a.client}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-purple-400">Нет записей на сегодня</p>
-                            )}
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="text-white font-semibold mb-2">Расписание</h4>
+                                    <p className="text-purple-300">{employee.schedule}</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-white font-semibold mb-2">Записи на сегодня</h4>
+                                    {employee.appointments.length > 0 ? (
+                                        <div className="space-y-1">
+                                            {employee.appointments.map(appointment => (
+                                                <div key={appointment.id} className="text-purple-300 text-sm">
+                                                    {appointment.time} - {appointment.client}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-purple-400 text-sm">Нет записей</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-4">
+                                <Button>
+                                    <MessageCircle size={16} className="mr-2" />
+                                    Написать
+                                </Button>
+                                <Button>
+                                    Редактировать
+                                </Button>
+                            </div>
                         </div>
                     ))}
-            </div>
+                </div>
 
-            {isOpen &&
-                <Popup title='Добавление сотрудника'>
-                    {inviteLink.length > 0 ? (
-                        <div className="space-y-4">
-                            <div className="mb-2">🔗 Ссылка для регистрации:</div>
-                            <Input type="text" value={inviteLink} showCopyButton={true} setValue={() => {}} />
+                {filteredEmployees.length === 0 && (
+                    <div className="text-center text-purple-400 py-8">
+                        Сотрудники не найдены
+                    </div>
+                )}
 
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <button
-                                    onClick={() => {
-                                        const text = `Привет! Вот ссылка для регистрации`;
-                                        const url = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(text)}`;
-                                        window.open(url, '_blank');
-                                    }}
-                                    className="cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#229ED9] text-white font-semibold hover:bg-opacity-90 transition"
-                                >
-                                    <Send size={18} />
-                                    Telegram
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        const text = `Привет! Вот ссылка для регистрации ${inviteLink}`;
-                                        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-                                        window.open(url, '_blank');
-                                    }}
-                                    className="cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white font-semibold hover:bg-opacity-90 transition"
-                                >
-                                    <MessageCircle size={18} />
-                                    WhatsApp
-                                </button>
-                            </div>
-
-                            <div className="mx-auto w-full text-center">
-                                <Button onClick={closeModal}>Назад</Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <Input
-                                type="email"
-                                placeholder="Email сотрудника"
-                                value={email}
-                                setValue={setEmail}
-                                transitionDelay={0.3}
-                            />
-                            {!loading ? (
-                                <div className="flex justify-between gap-4">
+                {/* Попап приглашения */}
+                {isOpen && (
+                    <Popup title="Пригласить сотрудника">
+                        {!inviteLink ? (
+                            <>
+                                <Input
+                                    type="email"
+                                    placeholder="Email сотрудника"
+                                    value={email}
+                                    setValue={setEmail}
+                                    transitionDelay={0.25}
+                                />
+                                <div className="flex gap-2 mt-4">
                                     <Button
                                         loading={loading}
-                                        onClick={() => inviteEmployee(email, currentBusiness, userId)}
+                                        onClick={() => {
+                                            alert('info', 'Функция приглашения сотрудников будет доступна в следующих версиях');
+                                            closeModal();
+                                        }}
+                                        transitionDelay={0.35}
                                     >
+                                        <Send size={16} className="mr-2" />
                                         Сгенерировать ссылку
                                     </Button>
-                                    <Button onClick={closeModal}>Отмена</Button>
+                                    <Button onClick={closeModal} transitionDelay={0.4}>
+                                        Отмена
+                                    </Button>
                                 </div>
-                            ) : (
-                                <Spinner />
-                            )}
-                        </>
-                    )}
-
-                </Popup>
-            }
-        </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-center">
+                                    <p className="text-purple-300 mb-4">Ссылка для приглашения:</p>
+                                    <div className="bg-purple-900 p-3 rounded border">
+                                        <code className="text-green-400 text-sm break-all">{inviteLink}</code>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-4">
+                                    <Button
+                                        onClick={copyInviteLink}
+                                        transitionDelay={0.35}
+                                    >
+                                        Копировать ссылку
+                                    </Button>
+                                    <Button onClick={closeModal} transitionDelay={0.4}>
+                                        Закрыть
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Popup>
+                )}
+            </div>
+        </LayoutPage>
     );
 }

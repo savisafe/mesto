@@ -1,36 +1,43 @@
 'use client';
 
 import {useState} from 'react';
-import {supabase} from '../../supabaseClient';
 import {routes} from '@/routes/routes';
 import {motion} from 'framer-motion';
 import {Popup} from "@/ui/popup/Popup";
 import {Input} from "@/ui/input/Input";
 import {Button} from "@/ui/button/Button";
 import {useNotification} from "@/contexts/NotificationContext";
+import {useAuth} from '@/contexts/AuthContext';
 
 export default function LoginOTPPage() {
     const alert = useNotification();
+    const {loginWithEmail} = useAuth();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleLoginOTP = async () => {
+        if (!email) {
+            setError('Введите email');
+            return;
+        }
+
         setLoading(true);
         setError(null);
-        const {error} = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-                emailRedirectTo: process.env.NEXT_PUBLIC_URL
-            }
-        });
 
-        if (error) {
-            setError(error.message);
-        } else {
-            alert('info', 'Проверьте свою почту для входа в систему');
+        try {
+            const result = await loginWithEmail(email);
+            
+            if (result.success) {
+                alert('success', 'Проверьте свою почту для входа в систему');
+            } else {
+                setError(result.error || 'Ошибка отправки ссылки');
+            }
+        } catch {
+            setError('Произошла ошибка при отправке ссылки');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

@@ -8,8 +8,7 @@ export const useAccess = (...requiredRoles: string[]) => {
     const { accessToken, user, loading } = useAuth();
     const router = useRouter();
 
-    const userRole = user?.user_metadata?.role ?? '';
-
+    const userRole = user?.role ?? '';
     const isAllowed = requiredRoles.length === 0 || requiredRoles.includes(userRole);
 
     useEffect(() => {
@@ -19,12 +18,13 @@ export const useAccess = (...requiredRoles: string[]) => {
     }, [accessToken, loading, router]);
 
     if (loading || accessToken === null || !userRole) {
-        return { status: 'loading', component: <Spinner /> };
+        return { status: 'loading', component: <Spinner />, hasAccess: false };
     }
 
     if (!isAllowed) {
         return {
             status: 'forbidden',
+            hasAccess: false,
             component: (
                 <div className="flex flex-col items-center justify-center h-screen">
                     <h1 className="text-3xl font-bold mb-4">Доступ запрещён</h1>
@@ -36,5 +36,5 @@ export const useAccess = (...requiredRoles: string[]) => {
         };
     }
 
-    return { status: 'ok' };
+    return { status: 'ok', hasAccess: true };
 };

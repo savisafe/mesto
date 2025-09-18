@@ -8,7 +8,6 @@ import {useAuth} from "@/contexts/AuthContext";
 import {routes} from "@/routes/routes";
 import {useRouter} from "next/navigation";
 import Spinner from "@/ui/spinner/Spinner";
-import {supabase} from "../../../supabaseClient";
 
 const protectedLinks = [
     {href: '/dashboard', label: 'Панель управления'},
@@ -27,7 +26,7 @@ const publicLinks = [
 export function Header() {
     const router = useRouter();
     const ref = useRef<HTMLDivElement | null>(null);
-    const {accessToken, userName, loading} = useAuth();
+    const {accessToken, userName, loading, logout} = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const navLinks = accessToken ? protectedLinks : publicLinks;
 
@@ -45,8 +44,8 @@ export function Header() {
         };
     }, [isOpen, setIsOpen, accessToken]);
 
-    const logout = async () => {
-        await supabase.auth.signOut();
+    const handleLogout = () => {
+        logout();
         router.replace(routes.HOME);
     };
 
@@ -75,7 +74,7 @@ export function Header() {
                                 ? (
                                     <div className="text-sm text-purple-300">
                                         👤 {userName} | <button className="cursor-pointer hover:text-white"
-                                                               onClick={logout}>Выйти</button>
+                                                               onClick={handleLogout}>Выйти</button>
                                     </div>
                                 )
                                 : (
@@ -118,7 +117,7 @@ export function Header() {
                         {accessToken
                             ? (
                                 <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
-                                    👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={logout}>Выйти</button>
+                                    👤 {userName} | <button className="cursor-pointer hover:text-white" onClick={handleLogout}>Выйти</button>
                                 </div>
                             )
                             : (

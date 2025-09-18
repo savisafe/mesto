@@ -3,7 +3,7 @@ export const routes = {
     LOGIN: '/login',
     LOGIN_OTP: '/login-otp',
     DASHBOARD: '/dashboard',
-    CREATE_BUSINESS: '/create-business',
+    MY_BUSINESS: '/my-business',
     CALENDAR: '/calendar',
     REGISTRATION: '/registration',
     CLIENTS: '/clients',
