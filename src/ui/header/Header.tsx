@@ -10,18 +10,10 @@ import {useRouter} from "next/navigation";
 import Spinner from "@/ui/spinner/Spinner";
 
 const protectedLinks = [
-    {href: '/dashboard', label: 'Панель управления'},
-    {href: '/news', label: 'Новости'},
-    {href: '/contact', label: 'Контакты'},
+    {href: routes.DASHBOARD, label: 'Панель управления'},
 ];
 
-const publicLinks = [
-    {href: '/', label: 'Главная'},
-    {href: '/about', label: 'О нас'},
-    {href: '/features', label: 'Возможности'},
-    {href: '/news', label: 'Новости'},
-    {href: '/contact', label: 'Контакты'},
-];
+const publicLinks: { href: string; label: string }[] = [];
 
 export function Header() {
     const router = useRouter();

@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import {Business, EmployeeStatus, RecordEntry, Review} from "@/types/types";
+import {EmployeeStatus, RecordEntry, Review} from "@/types/types";
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
 import {useAccess} from "@/hooks/useAccess";
 import {Select} from "@/ui/select/Select";
@@ -29,7 +29,7 @@ const recentReviews: Review[] = [
 ];
 
 export default function DashboardPage() {
-    const {businessesData, currentBusiness} = useBusiness() as { businessesData: Business[], currentBusiness: string };
+    const {businessesData, currentBusiness} = useBusiness();
     const [selectedBusiness, setSelectedBusiness] = useState<string>(currentBusiness);
     const access = useAccess(roles.owner, roles.admin);
 
