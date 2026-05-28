@@ -1,29 +1,28 @@
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import Spinner from "@/ui/spinner/Spinner";
-import { routes } from "@/routes/routes";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { routes } from '@/routes/routes';
 
 export const useAccess = (...requiredRoles: string[]) => {
-    const { accessToken, user, loading } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
 
     const userRole = user?.role ?? '';
     const isAllowed = requiredRoles.length === 0 || requiredRoles.includes(userRole);
 
     useEffect(() => {
-        if (!loading && accessToken === null) {
-            router.replace(routes.HOME);
+        if (!user) {
+            router.replace(routes.LOGIN);
         }
-    }, [accessToken, loading, router]);
+    }, [user, router]);
 
-    if (loading || accessToken === null || !userRole) {
-        return { status: 'loading', component: <Spinner />, hasAccess: false };
+    if (!user) {
+        return { status: 'loading' as const, hasAccess: false, component: null };
     }
 
     if (!isAllowed) {
         return {
-            status: 'forbidden',
+            status: 'forbidden' as const,
             hasAccess: false,
             component: (
                 <div className="flex flex-col items-center justify-center h-screen">
@@ -36,5 +35,5 @@ export const useAccess = (...requiredRoles: string[]) => {
         };
     }
 
-    return { status: 'ok', hasAccess: true };
+    return { status: 'ok' as const, hasAccess: true, component: null };
 };

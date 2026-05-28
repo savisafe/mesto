@@ -21,3 +21,20 @@ export const users = pgTable('users', {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type PublicUser = Omit<User, 'passwordHash'>;
+
+// Явно перечисляем публичные поля, чтобы случайно не утёк passwordHash
+// (или будущие чувствительные колонки) через `...rest`.
+export function toPublicUser(user: User): PublicUser {
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified,
+        lastLoginAt: user.lastLoginAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+    };
+}

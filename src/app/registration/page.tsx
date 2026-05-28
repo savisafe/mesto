@@ -1,4 +1,4 @@
-import RegistrationPage from "@/pages/RegistrationPage";
+import RegistrationPage from "@/views/RegistrationPage";
 import {Suspense} from "react";
 
 export default function Page() {

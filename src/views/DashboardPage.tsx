@@ -7,7 +7,6 @@ import {useAccess} from "@/hooks/useAccess";
 import {Select} from "@/ui/select/Select";
 import {WidgetCard} from "@/ui/widget-card/WidgetCard";
 import {useBusiness} from "@/contexts/BusinessContext";
-import {roles} from "@/lib/apiClient";
 
 //TODO раскидать моки когда будет понятна структура данных
 const recordsToday = 7;
@@ -31,7 +30,7 @@ const recentReviews: Review[] = [
 export default function DashboardPage() {
     const {businessesData, currentBusiness} = useBusiness();
     const [selectedBusiness, setSelectedBusiness] = useState<string>(currentBusiness);
-    const access = useAccess(roles.owner, roles.admin);
+    const access = useAccess('OWNER', 'ADMIN');
 
     if (access.status !== 'ok') {
         return <LayoutPage>{access.component}</LayoutPage>;

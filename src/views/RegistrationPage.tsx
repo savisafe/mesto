@@ -1,31 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { routes } from "@/routes/routes";
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Button } from "@/ui/button/Button";
-import { Input } from "@/ui/input/Input";
-import { Popup } from "@/ui/popup/Popup";
-import { useNotification } from "@/contexts/NotificationContext";
-import Link from "next/link";
-import { useAuth } from '@/contexts/AuthContext';
-
-interface Invite {
-    id: string;
-    email: string;
-    business_id: string;
-    accepted: boolean;
-    expires_at: string;
-}
+import Link from 'next/link';
+import { Button } from '@/ui/button/Button';
+import { Input } from '@/ui/input/Input';
+import { Popup } from '@/ui/popup/Popup';
+import { useNotification } from '@/contexts/NotificationContext';
+import { registerAction } from '@/actions/auth';
+import { routes } from '@/routes/routes';
 
 export default function RegistrationPage() {
-    const router = useRouter();
     const alert = useNotification();
-    const {register} = useAuth();
-    const searchParams = useSearchParams();
-    const [inviteId, setInviteId] = useState<string | null>(null);
-    const [invite] = useState<Invite | null>(null);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -34,30 +20,11 @@ export default function RegistrationPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const id = searchParams?.get('invite');
-        if (id) {
-            setInviteId(id);
-        }
-    }, [searchParams]);
-
-    useEffect(() => {
-        const fetchInvite = async () => {
-            if (!inviteId) return;
-            // TODO: Реализовать получение информации о приглашении
-            // Пока что просто показываем сообщение
-            alert('info', 'Регистрация по приглашению временно недоступна');
-        };
-
-        fetchInvite();
-    }, [inviteId, alert]);
-
     const handleRegistration = async () => {
         if (password !== confirmPassword) {
             alert('error', 'Пароли не совпадают');
             return;
         }
-
         if (!name || !email || !password) {
             alert('error', 'Заполните все обязательные поля');
             return;
@@ -65,30 +32,29 @@ export default function RegistrationPage() {
 
         setLoading(true);
         setError(null);
-
         try {
-            const result = await register({
+            const result = await registerAction({
                 email,
                 password,
                 name,
                 phone: phone || undefined,
             });
-
-            if (result.success) {
-                alert('success', 'Регистрация прошла успешно!');
-                router.push(routes.DASHBOARD);
-            } else {
-                alert('error', result.error || 'Ошибка регистрации');
+            if (!result.ok) {
+                setError(result.error);
+                alert('error', result.error);
             }
-        } catch {
-            alert('error', 'Произошла ошибка при регистрации');
+        } catch (err) {
+            const message = err instanceof Error ? err.message : '';
+            if (!message.includes('NEXT_REDIRECT')) {
+                alert('error', 'Произошла ошибка при регистрации');
+            }
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Popup title={invite ? 'Регистрация сотрудника' : 'Регистрация'}>
+        <Popup title="Регистрация">
             <Input
                 type="text"
                 placeholder="Имя"
@@ -158,7 +124,10 @@ export default function RegistrationPage() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.65 }}
             >
-                Есть аккаунт? <Link href={routes.LOGIN} className="underline hover:text-purple-300">войдите</Link>
+                Есть аккаунт?{' '}
+                <Link href={routes.LOGIN} className="underline hover:text-purple-300">
+                    войдите
+                </Link>
             </motion.p>
         </Popup>
     );

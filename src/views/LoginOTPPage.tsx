@@ -1,20 +1,20 @@
 'use client';
 
-import {useState} from 'react';
-import {routes} from '@/routes/routes';
-import {motion} from 'framer-motion';
-import {Popup} from "@/ui/popup/Popup";
-import {Input} from "@/ui/input/Input";
-import {Button} from "@/ui/button/Button";
-import {useNotification} from "@/contexts/NotificationContext";
-import {useAuth} from '@/contexts/AuthContext';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Popup } from '@/ui/popup/Popup';
+import { Input } from '@/ui/input/Input';
+import { Button } from '@/ui/button/Button';
+import { useNotification } from '@/contexts/NotificationContext';
+import { requestMagicLinkAction } from '@/actions/auth';
+import { routes } from '@/routes/routes';
 
 export default function LoginOTPPage() {
     const alert = useNotification();
-    const {loginWithEmail} = useAuth();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [sent, setSent] = useState(false);
 
     const handleLoginOTP = async () => {
         if (!email) {
@@ -24,14 +24,13 @@ export default function LoginOTPPage() {
 
         setLoading(true);
         setError(null);
-
         try {
-            const result = await loginWithEmail(email);
-            
-            if (result.success) {
-                alert('success', 'Проверьте свою почту для входа в систему');
+            const result = await requestMagicLinkAction(email);
+            if (result.ok) {
+                setSent(true);
+                alert('success', 'Если такой email зарегистрирован — ссылка отправлена');
             } else {
-                setError(result.error || 'Ошибка отправки ссылки');
+                setError(result.error);
             }
         } catch {
             setError('Произошла ошибка при отправке ссылки');
@@ -53,11 +52,21 @@ export default function LoginOTPPage() {
             {error && (
                 <motion.p
                     className="text-red-400 text-sm mb-4 text-center"
-                    initial={{opacity: 0}}
-                    animate={{opacity: 1}}
-                    transition={{delay: 0.45}}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.45 }}
                 >
                     {error}
+                </motion.p>
+            )}
+
+            {sent && (
+                <motion.p
+                    className="text-green-400 text-sm mb-4 text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
+                    Проверьте почту — мы отправили ссылку для входа.
                 </motion.p>
             )}
 
@@ -73,9 +82,9 @@ export default function LoginOTPPage() {
 
             <motion.div
                 className="flex justify-between items-center mt-4 text-sm text-purple-400"
-                initial={{opacity: 0}}
-                animate={{opacity: 1}}
-                transition={{delay: 0.55}}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.55 }}
             >
                 <a href={routes.LOGIN} className="underline hover:text-purple-300">
                     Вход

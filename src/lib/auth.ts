@@ -1,16 +1,18 @@
 import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { validateSession, type SessionWithUser } from './session';
+import { validateSession } from './session';
+import { toPublicUser, type PublicUser } from '@/db/schema';
 
 export const SESSION_COOKIE = 'mesto_session';
 
 // cache() мемоизирует в рамках одного запроса:
 // несколько server-component вызовов на странице → один SELECT в БД.
-export const getCurrentUser = cache(async (): Promise<SessionWithUser | null> => {
+export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
     const token = (await cookies()).get(SESSION_COOKIE)?.value;
     if (!token) return null;
-    return validateSession(token);
+    const result = await validateSession(token);
+    return result ? toPublicUser(result.user) : null;
 });
 
 export async function setSessionCookie(token: string, expiresAt: Date): Promise<void> {

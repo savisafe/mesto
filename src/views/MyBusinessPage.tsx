@@ -5,7 +5,7 @@ import {Input} from "@/ui/input/Input";
 import {useEffect, useState} from "react";
 import {Button} from "@/ui/button/Button";
 import {useAccess} from "@/hooks/useAccess";
-import {Business, roles} from "@/lib/apiClient";
+import type { Business } from "@/db/schema";
 import {Popup} from "@/ui/popup/Popup";
 import {useAuth} from "@/contexts/AuthContext";
 import {useNotification} from "@/contexts/NotificationContext";
@@ -38,7 +38,7 @@ export default function MyBusinessPage() {
             return;
         }
 
-        if (role !== roles.owner && role !== roles.admin) {
+        if (role !== 'OWNER' && role !== 'ADMIN') {
             alert('error', 'Только владелец бизнеса может создать бизнес');
             return;
         }

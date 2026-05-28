@@ -1,19 +1,16 @@
 'use client';
 
-import {useState} from 'react';
-import {useRouter} from 'next/navigation';
-import {routes} from '@/routes/routes';
-import {useAuth} from '@/contexts/AuthContext';
-import {motion} from 'framer-motion';
-import {Input} from "@/ui/input/Input";
-import {Button} from "@/ui/button/Button";
-import {Popup} from "@/ui/popup/Popup";
-import {useNotification} from "@/contexts/NotificationContext";
-import {LayoutPage} from "@/ui/layouts/LayoutPage";
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Input } from '@/ui/input/Input';
+import { Button } from '@/ui/button/Button';
+import { Popup } from '@/ui/popup/Popup';
+import { LayoutPage } from '@/ui/layouts/LayoutPage';
+import { useNotification } from '@/contexts/NotificationContext';
+import { loginAction } from '@/actions/auth';
+import { routes } from '@/routes/routes';
 
 export default function LoginPage() {
-    const router = useRouter()
-    const {login} = useAuth();
     const alert = useNotification();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -26,22 +23,18 @@ export default function LoginPage() {
         }
 
         setLoading(true);
-        
         try {
-            const result = await login({ email, password });
-            
-            if (result.success) {
-                alert('success', 'Успешный вход в систему');
-                
-                // Даём время на обновление контекста, затем перенаправляем
-                setTimeout(() => {
-                    router.replace(routes.DASHBOARD);
-                }, 100);
-            } else {
-                alert('error', result.error || 'Ошибка входа');
+            const result = await loginAction({ email, password });
+            // успешный логин → redirect внутри action, сюда не доберёмся.
+            if (!result.ok) {
+                alert('error', result.error);
             }
-        } catch {
-            alert('error', 'Произошла ошибка при входе');
+        } catch (err) {
+            // redirect() из next/navigation бросает специальный объект — не считаем ошибкой
+            const message = err instanceof Error ? err.message : '';
+            if (!message.includes('NEXT_REDIRECT')) {
+                alert('error', 'Произошла ошибка при входе');
+            }
         } finally {
             setLoading(false);
         }
@@ -68,20 +61,16 @@ export default function LoginPage() {
                 />
 
                 <div className="flex justify-center mt-4">
-                    <Button
-                        onClick={handleLogin}
-                        loading={loading}
-                        transitionDelay={0.45}
-                    >
+                    <Button onClick={handleLogin} loading={loading} transitionDelay={0.45}>
                         Войти в систему
                     </Button>
                 </div>
 
                 <motion.div
                     className="flex justify-between items-center mt-4 text-sm text-purple-400"
-                    initial={{opacity: 0}}
-                    animate={{opacity: 1}}
-                    transition={{delay: 0.5}}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
                 >
                     <a href={routes.LOGIN_OTP} className="underline hover:text-purple-300">
                         Войти через почту
