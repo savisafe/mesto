@@ -10,12 +10,17 @@ CRM-система для малого бизнеса. Next.js приложен�
 - Tailwind CSS 4
 - Framer Motion, `@headlessui/react`, `chart.js`
 - Состояние: React Context
+- БД: Neon (serverless Postgres, регион `aws-eu-central-1` Frankfurt) + Drizzle ORM
+- Деплой: Vercel (регион функций `fra1`)
 
 ## Быстрый старт
 
-1. Скопировать `.env.example` → `.env.local`, заполнить переменные.
-2. `yarn install`
-3. `yarn start:dev` — приложение поднимется на `http://localhost:3001`.
+1. `yarn install`
+2. Переменные окружения:
+   - Если есть доступ к Vercel-проекту: `npx vercel link && npx vercel env pull .env.local`
+   - Иначе: скопировать `.env.example` → `.env.local`, заполнить вручную (`DATABASE_URL` из Neon-консоли)
+3. Накатить миграции: `yarn db:migrate`
+4. `yarn start:dev` — приложение поднимется на `http://localhost:3001`.
 
 ## Скрипты
 
@@ -26,6 +31,10 @@ CRM-система для малого бизнеса. Next.js приложен�
 | `yarn start` | запуск production-сборки |
 | `yarn lint` | ESLint |
 | `yarn lint:fix` | ESLint --fix |
+| `yarn db:generate` | Drizzle: сгенерировать SQL-миграцию из схемы |
+| `yarn db:migrate` | Drizzle: накатить миграции в БД |
+| `yarn db:push` | Drizzle: пушнуть схему напрямую (для прототипирования) |
+| `yarn db:studio` | Drizzle: GUI для просмотра БД |
 
 ## Структура
 
@@ -37,9 +46,14 @@ src/
 ├── contexts/                # AuthContext, BusinessContext, NotificationContext
 ├── hooks/                   # useAccess (контроль доступа)
 ├── lib/apiClient.ts         # клиент текущего внешнего бэкенда (удалится после Neon)
+├── db/                      # Drizzle: схема (schema/) + клиент Neon (index.ts)
 ├── routes/                  # карта маршрутов
 ├── types/                   # общие типы
 └── consts/
+
+drizzle/                     # SQL-миграции (генерятся `yarn db:generate`)
+drizzle.config.ts            # конфиг Drizzle Kit
+vercel.json                  # регион функций Vercel
 ```
 
 ## Переменные окружения
