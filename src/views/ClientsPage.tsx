@@ -1,244 +1,290 @@
 'use client';
 
-import { useState, Fragment, ChangeEvent } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import clsx from 'clsx';
+import { useCallback, useEffect, useState } from 'react';
+import { LayoutPage } from '@/ui/layouts/LayoutPage';
+import { Button } from '@/ui/button/Button';
+import { Input } from '@/ui/input/Input';
+import { Popup } from '@/ui/popup/Popup';
+import Spinner from '@/ui/spinner/Spinner';
+import { useAccess } from '@/hooks/useAccess';
+import { useBusiness } from '@/contexts/BusinessContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import {
+    listClientsAction,
+    createClientAction,
+    updateClientAction,
+    deleteClientAction,
+} from '@/actions/clients';
+import type { Client } from '@/db/schema';
 
-interface Visit {
-    date: string;
-    comment: string;
-}
-
-interface Client {
-    name: string;
-    phone: string;
-    note: string;
-    visits: Visit[];
-    blacklisted: boolean;
-}
-
-// Образцы имен и примечаний для реалистичных данных
-const sampleNames = [
-    'Иван Иванов', 'Мария Смирнова', 'Алексей Кузнецов', 'Елена Попова',
-    'Дмитрий Соколов', 'Ольга Лебедева', 'Сергей Ковалёв', 'Анна Новикова',
-    'Николай Морозов', 'Татьяна Смирнова'
-];
-const sampleNotes = [
-    'Постоянный клиент', 'Требуется консультация', 'Новая клиентка',
-    'Аллергия на краску', 'Предпочитает вечернее время'
-];
-
-// Генерация большого объёма клиентов (например, 10000)
-const TOTAL_CLIENTS = 10000;
-const initialClients: Client[] = Array.from({ length: TOTAL_CLIENTS }, (_, i) => ({
-    name: `${sampleNames[i % sampleNames.length]} ${i + 1}`,
-    phone: `+7${(9000000000 + i).toString().padStart(10, '0')}`,
-    note: sampleNotes[i % sampleNotes.length],
-    visits: [],
-    blacklisted: false
-}));
+const PER_PAGE = 25;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ClientsPage() {
-    const [clients, setClients] = useState<Client[]>(initialClients);
+    const access = useAccess();
+    const { currentBusiness } = useBusiness();
+    const alert = useNotification();
+
     const [search, setSearch] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [form, setForm] = useState({ name: '', phone: '', note: '' });
-    const [currentPage, setCurrentPage] = useState(1);
-    const perPage = 15;
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
 
-    // Фильтрация по поиску
-    const filtered = clients.filter(c =>
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.phone.includes(search)
-    );
+    const [addOpen, setAddOpen] = useState(false);
+    const [form, setForm] = useState({ name: '', phone: '', email: '', note: '' });
+    const [submitting, setSubmitting] = useState(false);
 
-    // Пагинация
-    const pageCount = Math.ceil(filtered.length / perPage);
-    const paginated = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
+    useEffect(() => {
+        const id = setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(id);
+    }, [search]);
 
-    const handleAdd = () => {
-        setClients([{ ...form, visits: [], blacklisted: false }, ...clients]);
-        setIsModalOpen(false);
-        setForm({ name: '', phone: '', note: '' });
+    const fetchClients = useCallback(async () => {
+        if (!currentBusiness) return;
+        setLoading(true);
+        try {
+            const result = await listClientsAction({
+                businessId: currentBusiness,
+                search: debouncedSearch || undefined,
+                page,
+                perPage: PER_PAGE,
+            });
+            if (result.ok) {
+                setClients(result.data.clients);
+                setTotal(result.data.total);
+            } else {
+                alert('error', result.error);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [currentBusiness, debouncedSearch, page, alert]);
+
+    useEffect(() => {
+        fetchClients();
+    }, [fetchClients]);
+
+    const handleAdd = async () => {
+        if (!currentBusiness) return;
+        setSubmitting(true);
+        try {
+            const result = await createClientAction({
+                businessId: currentBusiness,
+                name: form.name,
+                phone: form.phone,
+                email: form.email || undefined,
+                note: form.note || undefined,
+            });
+            if (result.ok) {
+                alert('success', 'Клиент добавлен');
+                setForm({ name: '', phone: '', email: '', note: '' });
+                setAddOpen(false);
+                if (page !== 1) setPage(1);
+                else fetchClients();
+            } else {
+                alert('error', result.error);
+            }
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handleDelete = (idx: number) => {
-        const list = [...clients];
-        const globalIdx = (currentPage - 1) * perPage + idx;
-        list.splice(globalIdx, 1);
-        setClients(list);
+    const handleDelete = async (id: string) => {
+        const result = await deleteClientAction(id);
+        if (result.ok) {
+            alert('success', 'Клиент удалён');
+            fetchClients();
+        } else {
+            alert('error', result.error);
+        }
     };
 
-    const handleBlacklist = (idx: number) => {
-        const list = [...clients];
-        const globalIdx = (currentPage - 1) * perPage + idx;
-        list[globalIdx].blacklisted = !list[globalIdx].blacklisted;
-        setClients(list);
+    const handleToggleBlacklist = async (client: Client) => {
+        const result = await updateClientAction(client.id, {
+            isBlacklisted: !client.isBlacklisted,
+        });
+        if (result.ok) {
+            alert('success', client.isBlacklisted ? 'Разблокирован' : 'Перенесён в ЧС');
+            fetchClients();
+        } else {
+            alert('error', result.error);
+        }
     };
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-    };
+    if (access.status !== 'ok') {
+        return <LayoutPage>{access.component}</LayoutPage>;
+    }
 
-    const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setSearch(e.target.value);
-        setCurrentPage(1);
-    };
+    if (!currentBusiness) {
+        return (
+            <LayoutPage>
+                <div className="max-w-4xl mx-auto text-center text-purple-300 mt-20">
+                    Сначала создайте бизнес в разделе{' '}
+                    <a href="/my-business" className="underline hover:text-white">
+                        «Мои бизнесы»
+                    </a>
+                </div>
+            </LayoutPage>
+        );
+    }
+
+    const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
 
     return (
-        <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
-            <h1 className="text-3xl font-bold mb-6">Клиенты ({clients.length})</h1>
-
-            <div className="flex flex-wrap gap-4 items-center mb-6">
-                <input
-                    type="text"
-                    placeholder="Поиск по имени или телефону"
-                    value={search}
-                    onChange={handleSearchChange}
-                    className="px-3 py-2 rounded bg-purple-800 text-white placeholder-purple-400 flex-1"
-                />
-                <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl"
-                >+ Добавить клиента</button>
-            </div>
-
-            <table className="w-full table-auto text-left border-separate border-spacing-y-2 mb-4">
-                <thead>
-                <tr>
-                    <th className="px-4 py-2">Имя</th>
-                    <th className="px-4 py-2">Телефон</th>
-                    <th className="px-4 py-2">Примечание</th>
-                    <th className="px-4 py-2">Визиты</th>
-                    <th className="px-4 py-2">Действия</th>
-                </tr>
-                </thead>
-                <tbody>
-                {paginated.map((c, idx) => (
-                    <tr key={idx} className={c.blacklisted ? 'opacity-50' : ''}>
-                        <td className="px-4 py-2">{c.name}</td>
-                        <td className="px-4 py-2">{c.phone}</td>
-                        <td className="px-4 py-2">{c.note}</td>
-                        <td className="px-4 py-2">{c.visits.length}</td>
-                        <td className="px-4 py-2 space-x-2">
-                            <button className="bg-green-600 hover:bg-green-500 px-2 py-1 rounded text-white">Посещаемость</button>
-                            <button className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded text-white">Рассылка</button>
-                            <button
-                                className="bg-yellow-500 hover:bg-yellow-400 text-black px-2 py-1 rounded"
-                                onClick={() => handleBlacklist(idx)}
-                            >{c.blacklisted ? 'Разблокировать' : 'В ЧС'}</button>
-                            <button
-                                className="bg-red-600 hover:bg-red-500 px-2 py-1 rounded text-white"
-                                onClick={() => handleDelete(idx)}
-                            >Удалить</button>
-                        </td>
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-
-            {/* Пагинация с первым, последним и тремя вокруг */}
-            <div className="flex justify-center space-x-2 mb-6">
-                {/* Кнопка начала */}
-                <button
-                    onClick={() => handlePageChange(1)}
-                    className={clsx('px-3 py-1 rounded', currentPage === 1 ? 'bg-purple-500' : 'bg-purple-700 hover:bg-purple-600')}
-                >1</button>
-
-                {/* Показ эллипса перед текущими */}
-                {currentPage > 3 && <span className="px-2">...</span>}
-
-                {/* Три страницы вокруг текущей */}
-                {[-1, 0, 1].map(offset => {
-                    const page = currentPage + offset;
-                    if (page > 1 && page < pageCount) {
-                        return (
-                            <button
-                                key={page}
-                                onClick={() => handlePageChange(page)}
-                                className={clsx('px-3 py-1 rounded', currentPage === page ? 'bg-purple-500' : 'bg-purple-700 hover:bg-purple-600')}
-                            >{page}</button>
-                        );
-                    }
-                    return null;
-                })}
-
-                {/* Эллипс после */}
-                {currentPage < pageCount - 2 && <span className="px-2">...</span>}
-
-                {/* Кнопка конца */}
-                <button
-                    onClick={() => handlePageChange(pageCount)}
-                    className={clsx('px-3 py-1 rounded', currentPage === pageCount ? 'bg-purple-500' : 'bg-purple-700 hover:bg-purple-600')}
-                >{pageCount}</button>
-            </div>
-
-            {/* Modal for Adding Client */}
-            <Transition appear show={isModalOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-50" onClose={() => setIsModalOpen(false)}>
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-black bg-opacity-25" />
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center p-4 text-center">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 scale-95"
-                                enterTo="opacity-100 scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 scale-100"
-                                leaveTo="opacity-0 scale-95"
-                            >
-                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-purple-900 p-6 shadow-xl transition-all border border-purple-700">
-                                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-white mb-4">
-                                        Добавить клиента
-                                    </Dialog.Title>
-                                    <div className="space-y-3">
-                                        <input
-                                            type="text"
-                                            placeholder="Имя"
-                                            value={form.name}
-                                            onChange={(e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, name: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-md bg-purple-800 text-white placeholder-purple-400"
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Телефон"
-                                            value={form.phone}
-                                            onChange={(e: ChangeEvent<HTMLInputElement>) => setForm({ ...form, phone: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-md bg-purple-800 text-white placeholder-purple-400"
-                                        />
-                                        <textarea
-                                            placeholder="Примечание"
-                                            value={form.note}
-                                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm({ ...form, note: e.target.value })}
-                                            className="w-full px-3 py-2 rounded-md	bg-purple-800 text-white placeholder-purple-400"
-                                        />
-                                    </div>
-                                    <div className="mt-6 flex justify-end gap-2">
-                                        <button className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-white" onClick={() => setIsModalOpen(false)}>
-                                            Отмена
-                                        </button>
-                                        <button className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded text-white" onClick={handleAdd}>
-                                            Добавить
-                                        </button>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
-                        </div>
+        <LayoutPage>
+            <div className="max-w-6xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-white">Клиенты ({total})</h1>
+                    <div className="w-48">
+                        <Button onClick={() => setAddOpen(true)}>Добавить клиента</Button>
                     </div>
-                </Dialog>
-            </Transition>
-        </div>
+                </div>
+
+                <div className="mb-6">
+                    <Input
+                        type="text"
+                        placeholder="Поиск по имени или телефону"
+                        value={search}
+                        setValue={setSearch}
+                    />
+                </div>
+
+                <div className="bg-purple-800 bg-opacity-30 border border-purple-700 rounded-lg overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-purple-900 bg-opacity-50">
+                            <tr>
+                                <th className="px-4 py-3 text-purple-300 text-sm">Имя</th>
+                                <th className="px-4 py-3 text-purple-300 text-sm">Телефон</th>
+                                <th className="px-4 py-3 text-purple-300 text-sm">Email</th>
+                                <th className="px-4 py-3 text-purple-300 text-sm">Заметка</th>
+                                <th className="px-4 py-3 text-purple-300 text-sm">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading && clients.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-8 text-center">
+                                        <Spinner />
+                                    </td>
+                                </tr>
+                            ) : clients.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={5}
+                                        className="px-4 py-8 text-center text-purple-400"
+                                    >
+                                        {debouncedSearch
+                                            ? 'Никого не найдено'
+                                            : 'Список пуст — добавьте первого клиента'}
+                                    </td>
+                                </tr>
+                            ) : (
+                                clients.map((client) => (
+                                    <tr
+                                        key={client.id}
+                                        className={`border-t border-purple-700/30 ${client.isBlacklisted ? 'opacity-50' : ''}`}
+                                    >
+                                        <td className="px-4 py-3 text-white">{client.name}</td>
+                                        <td className="px-4 py-3 text-purple-200">
+                                            {client.phone}
+                                        </td>
+                                        <td className="px-4 py-3 text-purple-300 text-sm">
+                                            {client.email ?? '—'}
+                                        </td>
+                                        <td className="px-4 py-3 text-purple-300 text-sm">
+                                            {client.note ?? '—'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleToggleBlacklist(client)}
+                                                    className="px-3 py-1 text-sm bg-yellow-600 hover:bg-yellow-500 rounded text-white cursor-pointer"
+                                                >
+                                                    {client.isBlacklisted ? 'Разблокировать' : 'В ЧС'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(client.id)}
+                                                    className="px-3 py-1 text-sm bg-red-600 hover:bg-red-500 rounded text-white cursor-pointer"
+                                                >
+                                                    Удалить
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {pageCount > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-6 text-sm">
+                        <button
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            ←
+                        </button>
+                        <span className="px-3 py-1 text-purple-300">
+                            {page} / {pageCount}
+                        </span>
+                        <button
+                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                            disabled={page === pageCount}
+                            className="px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            →
+                        </button>
+                    </div>
+                )}
+
+                {addOpen && (
+                    <Popup title="Добавить клиента">
+                        <Input
+                            type="text"
+                            placeholder="Имя"
+                            value={form.name}
+                            setValue={(v) => setForm({ ...form, name: v })}
+                            transitionDelay={0.2}
+                        />
+                        <Input
+                            type="tel"
+                            placeholder="Телефон"
+                            value={form.phone}
+                            setValue={(v) => setForm({ ...form, phone: v })}
+                            transitionDelay={0.3}
+                        />
+                        <Input
+                            type="email"
+                            placeholder="Email (необязательно)"
+                            value={form.email}
+                            setValue={(v) => setForm({ ...form, email: v })}
+                            transitionDelay={0.4}
+                        />
+                        <Input
+                            type="text"
+                            placeholder="Заметка (необязательно)"
+                            value={form.note}
+                            setValue={(v) => setForm({ ...form, note: v })}
+                            transitionDelay={0.5}
+                        />
+                        <div className="flex gap-2 mt-4">
+                            <Button onClick={handleAdd} loading={submitting} transitionDelay={0.6}>
+                                Добавить
+                            </Button>
+                            <Button onClick={() => setAddOpen(false)} transitionDelay={0.65}>
+                                Отмена
+                            </Button>
+                        </div>
+                    </Popup>
+                )}
+            </div>
+        </LayoutPage>
     );
 }
