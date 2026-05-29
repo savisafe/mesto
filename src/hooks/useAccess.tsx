@@ -1,24 +1,27 @@
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import Spinner from "@/ui/spinner/Spinner";
-import { routes } from "@/routes/routes";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { routes } from '@/routes/routes';
+import type { UserRole } from '@/db/schema';
 
-export const useAccess = (...requiredRoles: string[]) => {
-    const { accessToken, user, loading } = useAuth();
+interface UseAccessResult {
+    status: 'loading' | 'forbidden' | 'ok';
+    hasAccess: boolean;
+    component: React.ReactNode | null;
+}
+
+export const useAccess = (...requiredRoles: UserRole[]): UseAccessResult => {
+    const { user, role } = useAuth();
     const router = useRouter();
 
-    const userRole = user?.role ?? '';
-    const isAllowed = requiredRoles.length === 0 || requiredRoles.includes(userRole);
+    const isAllowed = requiredRoles.length === 0 || (role !== null && requiredRoles.includes(role));
 
     useEffect(() => {
-        if (!loading && accessToken === null) {
-            router.replace(routes.HOME);
-        }
-    }, [accessToken, loading, router]);
+        if (!user) router.replace(routes.LOGIN);
+    }, [user, router]);
 
-    if (loading || accessToken === null || !userRole) {
-        return { status: 'loading', component: <Spinner />, hasAccess: false };
+    if (!user) {
+        return { status: 'loading', hasAccess: false, component: null };
     }
 
     if (!isAllowed) {
@@ -36,5 +39,5 @@ export const useAccess = (...requiredRoles: string[]) => {
         };
     }
 
-    return { status: 'ok', hasAccess: true };
+    return { status: 'ok', hasAccess: true, component: null };
 };

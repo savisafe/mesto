@@ -1,4 +1,4 @@
-import CalendarPage from "@/pages/CalendarPage";
+import CalendarPage from "@/views/CalendarPage";
 
 export default function Page() {
     return <CalendarPage/>;

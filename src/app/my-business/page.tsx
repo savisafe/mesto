@@ -1,4 +1,4 @@
-import MyBusinessPage from "@/pages/MyBusinessPage";
+import MyBusinessPage from "@/views/MyBusinessPage";
 
 export default function Page() {
     return <MyBusinessPage/>;
