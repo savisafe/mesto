@@ -1,12 +1,12 @@
 'use client';
 
 import {LayoutPage} from "@/ui/layouts/LayoutPage";
-import {Input} from "@/ui/input/Input";
+import {TextField} from "@/ui/form";
 import {useEffect, useState} from "react";
 import {Button} from "@/ui/button/Button";
 import {useAccess} from "@/hooks/useAccess";
 import type { Business } from "@/db/schema";
-import {Popup} from "@/ui/popup/Popup";
+import {Modal} from "@/ui/modal/Modal";
 import {useAuth} from "@/contexts/AuthContext";
 import {useNotification} from "@/contexts/NotificationContext";
 import {useBusiness} from "@/contexts/BusinessContext";
@@ -172,74 +172,75 @@ export default function MyBusinessPage() {
                 )}
 
                 {/* Попап создания бизнеса */}
-                {createPopupOpen && (
-                    <Popup title="Создание бизнеса">
-                        <Input
-                            type="text"
-                            placeholder="Название бизнеса"
-                            value={businessName}
-                            setValue={setBusinessName}
-                            transitionDelay={0.25}
-                        />
-                        <Input
-                            type="text"
-                            placeholder="Описание бизнеса (необязательно)"
-                            value={businessDescription}
-                            setValue={setBusinessDescription}
-                            transitionDelay={0.35}
-                        />
-                        <div className="flex gap-2 mt-4">
-                            <Button
-                                onClick={handleCreateBusiness}
-                                loading={loading}
-                                transitionDelay={0.45}
-                            >
-                                Создать
-                            </Button>
-                            <Button
+                <Modal
+                    open={createPopupOpen}
+                    onClose={() => setCreatePopupOpen(false)}
+                    title="Создание бизнеса"
+                    footer={
+                        <>
+                            <button
                                 onClick={() => setCreatePopupOpen(false)}
-                                transitionDelay={0.5}
+                                className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
                             >
                                 Отмена
-                            </Button>
-                        </div>
-                    </Popup>
-                )}
+                            </button>
+                            <button
+                                onClick={handleCreateBusiness}
+                                disabled={loading}
+                                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl text-white font-medium cursor-pointer transition"
+                            >
+                                {loading ? 'Создание...' : 'Создать'}
+                            </button>
+                        </>
+                    }
+                >
+                    <TextField
+                        label="Название бизнеса"
+                        value={businessName}
+                        onChange={setBusinessName}
+                        autoFocus
+                    />
+                    <TextField
+                        label="Описание"
+                        hint="Необязательно — короткое описание для команды"
+                        value={businessDescription}
+                        onChange={setBusinessDescription}
+                    />
+                </Modal>
 
-                {/* Попап редактирования бизнеса */}
-                {editMode && (
-                    <Popup title="Редактирование бизнеса">
-                        <Input
-                            type="text"
-                            placeholder="Название бизнеса"
-                            value={editBusinessName}
-                            setValue={setEditBusinessName}
-                            transitionDelay={0.25}
-                        />
-                        <Input
-                            type="text"
-                            placeholder="Описание бизнеса"
-                            value={editBusinessDescription}
-                            setValue={setEditBusinessDescription}
-                            transitionDelay={0.35}
-                        />
-                        <div className="flex gap-2 mt-4">
-                            <Button
-                                onClick={handleUpdateBusiness}
-                                loading={loading}
-                                transitionDelay={0.45}
-                            >
-                                Сохранить изменения
-                            </Button>
-                            <Button
+                <Modal
+                    open={editMode}
+                    onClose={() => setEditMode(false)}
+                    title="Редактирование бизнеса"
+                    footer={
+                        <>
+                            <button
                                 onClick={() => setEditMode(false)}
-                                transitionDelay={0.5}
+                                className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
                             >
                                 Отмена
-                            </Button>
-                        </div>
-                    </Popup>
-                )}
+                            </button>
+                            <button
+                                onClick={handleUpdateBusiness}
+                                disabled={loading}
+                                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl text-white font-medium cursor-pointer transition"
+                            >
+                                {loading ? 'Сохранение...' : 'Сохранить'}
+                            </button>
+                        </>
+                    }
+                >
+                    <TextField
+                        label="Название бизнеса"
+                        value={editBusinessName}
+                        onChange={setEditBusinessName}
+                    />
+                    <TextField
+                        label="Описание"
+                        value={editBusinessDescription}
+                        onChange={setEditBusinessDescription}
+                    />
+                </Modal>
             </div>
         </LayoutPage>
     );

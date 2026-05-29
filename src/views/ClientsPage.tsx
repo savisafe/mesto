@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
-import { Input } from '@/ui/input/Input';
-import { Popup } from '@/ui/popup/Popup';
+import { TextField } from '@/ui/form';
+import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
@@ -146,11 +146,12 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="mb-6">
-                    <Input
-                        type="text"
+                    <TextField
+                        type="search"
                         placeholder="Поиск по имени или телефону"
                         value={search}
-                        setValue={setSearch}
+                        onChange={setSearch}
+                        inline
                     />
                 </div>
 
@@ -244,46 +245,55 @@ export default function ClientsPage() {
                     </div>
                 )}
 
-                {addOpen && (
-                    <Popup title="Добавить клиента">
-                        <Input
-                            type="text"
-                            placeholder="Имя"
-                            value={form.name}
-                            setValue={(v) => setForm({ ...form, name: v })}
-                            transitionDelay={0.2}
-                        />
-                        <Input
-                            type="tel"
-                            placeholder="Телефон"
-                            value={form.phone}
-                            setValue={(v) => setForm({ ...form, phone: v })}
-                            transitionDelay={0.3}
-                        />
-                        <Input
-                            type="email"
-                            placeholder="Email (необязательно)"
-                            value={form.email}
-                            setValue={(v) => setForm({ ...form, email: v })}
-                            transitionDelay={0.4}
-                        />
-                        <Input
-                            type="text"
-                            placeholder="Заметка (необязательно)"
-                            value={form.note}
-                            setValue={(v) => setForm({ ...form, note: v })}
-                            transitionDelay={0.5}
-                        />
-                        <div className="flex gap-2 mt-4">
-                            <Button onClick={handleAdd} loading={submitting} transitionDelay={0.6}>
-                                Добавить
-                            </Button>
-                            <Button onClick={() => setAddOpen(false)} transitionDelay={0.65}>
+                <Modal
+                    open={addOpen}
+                    onClose={() => setAddOpen(false)}
+                    title="Добавить клиента"
+                    footer={
+                        <>
+                            <button
+                                onClick={() => setAddOpen(false)}
+                                className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
+                            >
                                 Отмена
-                            </Button>
-                        </div>
-                    </Popup>
-                )}
+                            </button>
+                            <button
+                                onClick={handleAdd}
+                                disabled={submitting}
+                                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl text-white font-medium cursor-pointer transition"
+                            >
+                                {submitting ? 'Добавление...' : 'Добавить'}
+                            </button>
+                        </>
+                    }
+                >
+                    <TextField
+                        label="Имя"
+                        value={form.name}
+                        onChange={(v) => setForm({ ...form, name: v })}
+                        autoFocus
+                    />
+                    <TextField
+                        label="Телефон"
+                        type="tel"
+                        autoComplete="tel"
+                        value={form.phone}
+                        onChange={(v) => setForm({ ...form, phone: v })}
+                    />
+                    <TextField
+                        label="Email"
+                        type="email"
+                        hint="Необязательно"
+                        value={form.email}
+                        onChange={(v) => setForm({ ...form, email: v })}
+                    />
+                    <TextField
+                        label="Заметка"
+                        hint="Необязательно — будет видна только команде"
+                        value={form.note}
+                        onChange={(v) => setForm({ ...form, note: v })}
+                    />
+                </Modal>
             </div>
         </LayoutPage>
     );

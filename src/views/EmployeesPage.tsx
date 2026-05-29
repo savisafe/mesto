@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
-import { Input } from '@/ui/input/Input';
+import { TextField, Field } from '@/ui/form';
 import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
@@ -256,16 +256,14 @@ export default function EmployeesPage() {
                         </>
                     }
                 >
-                    <Input
+                    <TextField
+                        label="Email сотрудника"
                         type="email"
-                        placeholder="Email сотрудника"
+                        autoComplete="off"
                         value={inviteForm.email}
-                        setValue={(v) => setInviteForm({ ...inviteForm, email: v })}
+                        onChange={(v) => setInviteForm({ ...inviteForm, email: v })}
                     />
-                    <div>
-                        <p className="text-purple-300 text-xs mb-2 uppercase tracking-wider font-medium">
-                            Роль
-                        </p>
+                    <Field label="Роль">
                         <div className="flex gap-2">
                             {(['EMPLOYEE', 'MANAGER'] as const).map((role) => (
                                 <button
@@ -281,7 +279,7 @@ export default function EmployeesPage() {
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </Field>
                 </Modal>
             </div>
         </LayoutPage>

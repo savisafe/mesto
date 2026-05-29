@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Input } from '@/ui/input/Input';
+import { TextField, PasswordField } from '@/ui/form';
 import { Button } from '@/ui/button/Button';
 import { Popup } from '@/ui/popup/Popup';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
@@ -28,10 +28,7 @@ export default function LoginPage() {
         setLoading(true);
         try {
             const result = await loginAction({ email, password }, next);
-            // успешный логин → redirect внутри action, сюда не доберёмся.
-            if (!result.ok) {
-                alert('error', result.error);
-            }
+            if (!result.ok) alert('error', result.error);
         } catch (err) {
             // redirect() из next/navigation бросает специальный объект — не считаем ошибкой
             const message = err instanceof Error ? err.message : '';
@@ -45,26 +42,23 @@ export default function LoginPage() {
 
     return (
         <LayoutPage>
-            <Popup title={'Вход в систему'}>
-                <Input
+            <Popup title="Вход в систему">
+                <TextField
+                    label="Email"
                     type="email"
-                    placeholder="Email"
+                    autoComplete="email"
                     value={email}
-                    setValue={setEmail}
-                    transitionDelay={0.3}
+                    onChange={setEmail}
                 />
-
-                <Input
-                    type="password"
-                    placeholder="Пароль"
+                <PasswordField
+                    label="Пароль"
+                    autoComplete="current-password"
                     value={password}
-                    setValue={setPassword}
-                    showButton={true}
-                    transitionDelay={0.4}
+                    onChange={setPassword}
                 />
 
                 <div className="flex justify-center mt-4">
-                    <Button onClick={handleLogin} loading={loading} transitionDelay={0.45}>
+                    <Button onClick={handleLogin} loading={loading}>
                         Войти в систему
                     </Button>
                 </div>
@@ -73,7 +67,7 @@ export default function LoginPage() {
                     className="flex justify-between items-center mt-4 text-sm text-purple-400"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.3 }}
                 >
                     <a href={routes.LOGIN_OTP} className="underline hover:text-purple-300">
                         Войти через почту

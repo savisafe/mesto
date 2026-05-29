@@ -90,3 +90,113 @@ tracking, retry logic, error observability» — это про нас.
 - `src/app/api/external/bookings/route.ts` — POST handler
 - `src/lib/api-auth.ts` — проверка Bearer-токена + поиск бизнеса
 - `src/views/settings/api-keys.tsx` — UI генерации
+
+---
+
+### Рабочий график и блокировка слотов
+
+Сейчас календарь принимает любую запись на любое время — мы не знаем
+когда бизнес/сотрудник работает, и нельзя закрыть кусок дня
+(обед, командировка, отгул).
+
+**Что нужно:**
+- График работы бизнеса по умолчанию (по дням недели + tz)
+- График сотрудника может переопределять (его смены ≠ часов бизнеса)
+- Точечные блоки на конкретные даты/часы: обед, отгул, отпуск, болезнь
+- Календарь при создании записи валидирует:
+  - попадает в рабочие часы сотрудника (или бизнеса если сотрудник
+    не задан) — `OUT_OF_HOURS`
+  - не пересекается с блоком — `BLOCKED`
+- В UI календаря серой плашкой показывать нерабочие часы и блоки
+- AI-bot endpoint (`docs/api/bot-integration.md`) должен возвращать
+  тот же `OUT_OF_HOURS` / `BLOCKED` чтобы бот мог переспросить дату
+
+**Где трогать:**
+- `src/db/schema/work-schedules.ts` — расписание (business_id, employee_user_id?,
+  weekday 0-6, start_minute, end_minute, valid_from, valid_until)
+- `src/db/schema/time-off.ts` — блоки (business_id, employee_user_id?, starts_at,
+  ends_at, reason)
+- `src/services/availability.ts` — проверка слотов (используется в
+  appointments.createAppointment + bot API)
+- `src/views/SchedulePage.tsx` (новая `/schedule`) — настройка часов
+- Сетка `/calendar` показывает blocks как disabled слоты
+
+---
+
+### Публичная страница бизнеса (по примеру dikidi.net)
+
+Reference: https://dikidi.net/1869595 — публичный виджет записи.
+Сейчас `src/views/BusinessPage.tsx` — мок, доступен только залогиненным.
+Нужна реально публичная страница без авторизации, по slug бизнеса.
+
+**Что нужно:**
+- URL вида `/b/<slug>` (slug на бизнес: транслит названия или uuid first 8)
+- Список услуг + цены + длительность
+- Выбор сотрудника (или «любой свободный»)
+- Календарь со слотами — учитывает рабочий график (см. предыдущий пункт)
+- Форма: имя, телефон, опц. email
+- При сабмите: find-or-create клиента по телефону в бизнесе,
+  создаём `appointment` с `source='public'` (новое значение в enum)
+- Опц. подтверждение через SMS/Telegram — задвинуть к моменту когда
+  будут мессенджеры (см. блок про Telegram-верификацию)
+- Owner может в `/settings` включить/выключить публичную страницу,
+  задать slug
+
+**Галерея работ.** Владелец грузит фото примеров (портфолио,
+до/после, интерьер), они показываются на публичной странице.
+Под каждым фото опц. подпись + привязка к сотруднику или услуге.
+Хранилище — Vercel Blob или Cloudflare R2 (дешевле, S3-совместимо).
+Лимиты: ~20 фото на бизнес для бесплатного тарифа, ресайз до 1600px.
+
+**Где трогать:**
+- `src/db/schema/businesses.ts` — добавить `slug` (unique, nullable),
+  `public_booking_enabled` (boolean)
+- `src/db/schema/business-photos.ts` — `business_id`, `url`, `caption?`,
+  `service_id?`, `employee_user_id?`, `sort_order`, `created_at`
+- `src/app/b/[slug]/page.tsx` — server component, рендерит каталог
+- `src/app/api/public/bookings/route.ts` — POST для бронирования
+  (rate-limit по ip, captcha при превышении)
+- `src/app/api/photos/upload/route.ts` — POST для загрузки (auth
+  owner only, multipart, через Vercel Blob SDK или presigned R2 URL)
+- `src/services/public-booking.ts` — изоморфно с `external/bookings`
+  но без идемпотентности и с проверкой captcha
+- `src/services/photos.ts` — CRUD галереи
+- `src/views/PublicBookingPage.tsx` (заменяет мок-страничку
+  `BusinessPage.tsx`) — секция «Наши работы» с галереей
+- В `/settings` — карточка «Публичная запись» с переключателем,
+  редактируемым slug, ссылкой-копировалкой и сеткой фото (drag для
+  пересортировки, drop-zone для загрузки)
+
+---
+
+### PWA (Progressive Web App)
+
+Чтобы Mesto можно было установить на телефон/десктоп как приложение
+без выкладки в App Store / Google Play. Особенно ценно для
+сотрудников которые проверяют расписание с мобилы.
+
+**Что нужно:**
+- `public/manifest.json` с name/short_name/icons (192/512), `display:
+  standalone`, `theme_color` (фиолетовый), `background_color`,
+  `start_url: /dashboard`
+- Иконки (192, 512, maskable) — генерим через `pwa-asset-generator`
+  из одного svg-логотипа
+- `<link rel="manifest">` в `src/app/layout.tsx`, плюс
+  apple-touch-icon meta-теги для iOS
+- Service Worker через `next-pwa` или `@serwist/next` — кэширует
+  статику (Cache-First для `_next/static`, Network-First для
+  страниц с fallback на offline.html)
+- Offline-страница: показывается когда нет сети и страница не
+  закэширована
+- Web Push (отдельно от PWA-инсталла) — для уведомлений о новых
+  записях из бота / отменах. Требует VAPID-ключей, эндпоинт
+  для подписки, и Notification API. Поднять когда будет ai-bot
+  интеграция
+
+**Где трогать:**
+- `public/manifest.json`, `public/icons/*`
+- `src/app/layout.tsx` — meta-теги
+- `next.config.ts` — обёртка `withSerwist(...)` или `withPWA(...)`
+- `src/lib/push-notifications.ts` (когда дойдём до Web Push)
+- `src/app/api/push/subscribe/route.ts` — приём подписок
+- Колонка в users: `push_subscription_json`

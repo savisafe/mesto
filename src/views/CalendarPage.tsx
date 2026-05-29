@@ -4,6 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
 import { Modal } from '@/ui/modal/Modal';
+import {
+    TextField,
+    NumberField,
+    SelectField,
+    TimeField,
+    DurationField,
+} from '@/ui/form';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
@@ -480,77 +487,40 @@ function CreateAppointmentDialog({
                 </>
             }
         >
-            <Field label="Услуга">
-                <select
-                    value={serviceId}
-                    onChange={(e) => setServiceId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
-                >
-                    {services.map((s) => (
-                        <option key={s.id} value={s.id}>
-                            {s.name} · {formatDuration(s.durationMinutes)} · {formatMoney(s.amount, s.currency)}
-                        </option>
-                    ))}
-                </select>
-            </Field>
-
-            <Field label="Клиент">
-                <select
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
-                >
-                    {clients.map((c) => (
-                        <option key={c.id} value={c.id}>
-                            {c.name} ({c.phone})
-                        </option>
-                    ))}
-                </select>
-            </Field>
-
-            <Field label="Сотрудник">
-                <select
-                    value={employeeId}
-                    onChange={(e) => setEmployeeId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
-                >
-                    <option value={EMPLOYEE_ANY}>Не назначен</option>
-                    {members.map((m) => (
-                        <option key={m.id} value={m.id}>
-                            {m.name}
-                        </option>
-                    ))}
-                </select>
-            </Field>
-
-            <Field label="Время">
-                <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
-                />
-            </Field>
-
-            <Field label="Заметка (необязательно)">
-                <input
-                    type="text"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Комментарий для сотрудника"
-                    className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
-                />
-            </Field>
+            <SelectField
+                label="Услуга"
+                value={serviceId}
+                onChange={setServiceId}
+                options={services.map((s) => ({
+                    value: s.id,
+                    label: `${s.name} · ${formatDuration(s.durationMinutes)} · ${formatMoney(s.amount, s.currency)}`,
+                }))}
+            />
+            <SelectField
+                label="Клиент"
+                value={clientId}
+                onChange={setClientId}
+                options={clients.map((c) => ({ value: c.id, label: `${c.name} (${c.phone})` }))}
+            />
+            <SelectField
+                label="Сотрудник"
+                value={employeeId}
+                onChange={setEmployeeId}
+                options={[
+                    { value: EMPLOYEE_ANY, label: 'Не назначен' },
+                    ...members.map((m) => ({ value: m.id, label: m.name })),
+                ]}
+            />
+            <TimeField label="Время" value={time} onChange={setTime} />
+            <TextField
+                label="Заметка (необязательно)"
+                value={notes}
+                onChange={setNotes}
+                placeholder="Комментарий для сотрудника"
+            />
         </Modal>
     );
 }
-
-type DurationUnit = 'minutes' | 'hours' | 'days';
-const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
-    minutes: 1,
-    hours: 60,
-    days: 60 * 24,
-};
 
 function ServicesDialog({
     open,
@@ -568,14 +538,12 @@ function ServicesDialog({
     const alert = useNotification();
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
-    const [duration, setDuration] = useState('60');
-    const [durationUnit, setDurationUnit] = useState<DurationUnit>('minutes');
+    const [durationMinutes, setDurationMinutes] = useState(60);
     const [submitting, setSubmitting] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
     const handleAdd = async () => {
         const amountNum = parseInt(amount, 10);
-        const durationNum = parseInt(duration, 10);
         if (!name.trim()) {
             alert('error', 'Введите название');
             return;
@@ -584,12 +552,10 @@ function ServicesDialog({
             alert('error', 'Некорректная цена');
             return;
         }
-        if (isNaN(durationNum) || durationNum <= 0) {
+        if (durationMinutes <= 0) {
             alert('error', 'Некорректная длительность');
             return;
         }
-
-        const totalMinutes = durationNum * UNIT_TO_MINUTES[durationUnit];
 
         setSubmitting(true);
         try {
@@ -597,13 +563,12 @@ function ServicesDialog({
                 businessId,
                 name,
                 amount: amountNum,
-                durationMinutes: totalMinutes,
+                durationMinutes,
             });
             if (r.ok) {
                 setName('');
                 setAmount('');
-                setDuration('60');
-                setDurationUnit('minutes');
+                setDurationMinutes(60);
                 onChanged();
             } else {
                 alert('error', r.error);
@@ -648,46 +613,24 @@ function ServicesDialog({
                 <h3 className="text-purple-300 text-xs uppercase tracking-wider font-medium mb-3">
                     Новая услуга
                 </h3>
-                <Field label="Название">
-                    <input
-                        type="text"
-                        placeholder="например: консультация, замена масла, окрашивание"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400 text-sm"
-                    />
-                </Field>
-                <Field label="Цена (₸)">
-                    <input
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
-                    />
-                </Field>
-                <Field label="Длительность">
-                    <div className="flex gap-2">
-                        <input
-                            type="number"
-                            min="1"
-                            placeholder="60"
-                            value={duration}
-                            onChange={(e) => setDuration(e.target.value)}
-                            className="flex-1 px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
-                        />
-                        <select
-                            value={durationUnit}
-                            onChange={(e) => setDurationUnit(e.target.value as DurationUnit)}
-                            className="px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
-                        >
-                            <option value="minutes">минуты</option>
-                            <option value="hours">часы</option>
-                            <option value="days">дни</option>
-                        </select>
-                    </div>
-                </Field>
+                <TextField
+                    label="Название"
+                    value={name}
+                    onChange={setName}
+                    placeholder="например: консультация, замена масла, окрашивание"
+                />
+                <NumberField
+                    label="Цена (₸)"
+                    value={amount}
+                    onChange={setAmount}
+                    min={0}
+                    placeholder="0"
+                />
+                <DurationField
+                    label="Длительность"
+                    valueMinutes={durationMinutes}
+                    onChangeMinutes={setDurationMinutes}
+                />
                 <Button onClick={handleAdd} loading={submitting}>
                     Добавить
                 </Button>
@@ -744,15 +687,6 @@ function ServicesDialog({
                 )}
             </section>
         </Modal>
-    );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <div className="mb-3">
-            <p className="text-purple-300 text-xs mb-1.5">{label}</p>
-            {children}
-        </div>
     );
 }
 
