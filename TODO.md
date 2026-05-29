@@ -61,3 +61,32 @@ Email-верификация и magic-link сейчас не работают п
   идемпотентного upsert
 - Кнопка «Подключить Telegram» в `/settings` или отдельная страница
   `/integrations`
+
+---
+
+### Интеграция с AI-bot (приём записей из Telegram-ботов)
+
+**Контекст.** В соседнем проекте https://github.com/savisafe/ai-bot
+живёт мультибот-платформа: один процесс держит несколько Telegram-ботов
+(по JSON-конфигу на каждый бизнес), FSM-скрипты собирают слоты записи
+(`service`, `date`, `time`, `client_name`, `phone`, `master`) и
+складывают `Booking` в свою БД. В их TODO пункт **11b** прямо
+сформулирован: «CRM API integration with idempotency, sync status
+tracking, retry logic, error observability» — это про нас.
+
+**Что нужно сделать с нашей стороны:**
+- API-ключи на бизнес: новая таблица `api_keys` (key_hash, business_id,
+  name, scopes, created_at, last_used_at) + страница `/settings/api`
+  для генерации/отзыва
+- HTTP endpoint `POST /api/external/bookings` для приёма записей
+  с идемпотентностью (полное описание контракта — в
+  `docs/api/bot-integration.md`)
+- Сначала появятся таблицы `services` и `appointments` (этап Calendar
+  в основном плане). До этого endpoint можно заглушить за фича-флагом.
+
+**Где трогать в коде:**
+- `src/db/schema/api-keys.ts` — таблица
+- `src/services/external/bookings.ts` — приём + идемпотентность
+- `src/app/api/external/bookings/route.ts` — POST handler
+- `src/lib/api-auth.ts` — проверка Bearer-токена + поиск бизнеса
+- `src/views/settings/api-keys.tsx` — UI генерации
