@@ -26,15 +26,17 @@ CRM-система для малого бизнеса. Next.js приложен�
 
 | Команда | Что делает |
 |---------|------------|
-| `yarn start:dev` | dev-сервер (Next + Turbopack) |
-| `yarn build` | production-сборка |
-| `yarn start` | запуск production-сборки |
-| `yarn lint` | ESLint |
-| `yarn lint:fix` | ESLint --fix |
-| `yarn db:generate` | Drizzle: сгенерировать SQL-миграцию из схемы |
-| `yarn db:migrate` | Drizzle: накатить миграции в БД |
-| `yarn db:push` | Drizzle: пушнуть схему напрямую (для прототипирования) |
-| `yarn db:studio` | Drizzle: GUI для просмотра БД |
+| `npm run start:dev` | dev-сервер (Next + Turbopack) |
+| `npm run build` | production-сборка |
+| `npm start` | запуск production-сборки |
+| `npm run lint` | ESLint |
+| `npm run lint:fix` | ESLint --fix |
+| `npm run db:generate` | Drizzle: сгенерировать SQL-миграцию из схемы |
+| `npm run db:migrate` | Drizzle: накатить миграции в БД |
+| `npm run db:push` | Drizzle: пушнуть схему напрямую (для прототипирования) |
+| `npm run db:studio` | Drizzle: GUI для просмотра БД |
+| `npm test` | Vitest: прогнать тесты (pglite в памяти, без внешней БД) |
+| `npm run test:watch` | Vitest: watch-режим |
 
 ## Структура
 
