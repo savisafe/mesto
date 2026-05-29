@@ -5,3 +5,5 @@ export * from './businesses';
 export * from './business-members';
 export * from './clients';
 export * from './invites';
+export * from './services';
+export * from './appointments';

@@ -75,12 +75,7 @@ export function DashboardView({ stats, userName }: Props) {
     );
 }
 
-const comingSoon = [
-    'Календарь записей',
-    'Финансы и выручка',
-    'Отзывы',
-    'Уведомления клиентам',
-];
+const comingSoon = ['Финансы и выручка', 'Отзывы', 'Уведомления клиентам'];
 
 function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
     return (
