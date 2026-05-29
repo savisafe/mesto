@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 
 export default function MyBusinessPage() {
     const alert = useNotification();
-    const {user, role} = useAuth();
+    const {user} = useAuth();
     const {businessesData, loading, createBusiness, updateBusiness, deleteBusiness, fetchBusinesses} = useBusiness();
     const {hasAccess} = useAccess();
     const [businessName, setBusinessName] = useState('');
@@ -33,21 +33,12 @@ export default function MyBusinessPage() {
     }, [user, fetchBusinesses]);
 
     const handleCreateBusiness = async () => {
-        if (!user) {
-            alert('info', 'Нет авторизованного пользователя');
-            return;
-        }
-
-        if (role !== 'OWNER' && role !== 'ADMIN') {
-            alert('error', 'Только владелец бизнеса может создать бизнес');
-            return;
-        }
-
-        if (!businessName || businessName.trim() === '') {
+        if (!businessName.trim()) {
             alert('error', 'Название бизнеса не заполнено');
             return;
         }
 
+        // Авторизация и роль проверяются на сервере в services/businesses.createBusiness.
         const result = await createBusiness({
             name: businessName,
             description: businessDescription || undefined,

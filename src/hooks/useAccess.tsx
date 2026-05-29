@@ -2,27 +2,31 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/routes/routes';
+import type { UserRole } from '@/db/schema';
 
-export const useAccess = (...requiredRoles: string[]) => {
-    const { user } = useAuth();
+interface UseAccessResult {
+    status: 'loading' | 'forbidden' | 'ok';
+    hasAccess: boolean;
+    component: React.ReactNode | null;
+}
+
+export const useAccess = (...requiredRoles: UserRole[]): UseAccessResult => {
+    const { user, role } = useAuth();
     const router = useRouter();
 
-    const userRole = user?.role ?? '';
-    const isAllowed = requiredRoles.length === 0 || requiredRoles.includes(userRole);
+    const isAllowed = requiredRoles.length === 0 || (role !== null && requiredRoles.includes(role));
 
     useEffect(() => {
-        if (!user) {
-            router.replace(routes.LOGIN);
-        }
+        if (!user) router.replace(routes.LOGIN);
     }, [user, router]);
 
     if (!user) {
-        return { status: 'loading' as const, hasAccess: false, component: null };
+        return { status: 'loading', hasAccess: false, component: null };
     }
 
     if (!isAllowed) {
         return {
-            status: 'forbidden' as const,
+            status: 'forbidden',
             hasAccess: false,
             component: (
                 <div className="flex flex-col items-center justify-center h-screen">
@@ -35,5 +39,5 @@ export const useAccess = (...requiredRoles: string[]) => {
         };
     }
 
-    return { status: 'ok' as const, hasAccess: true, component: null };
+    return { status: 'ok', hasAccess: true, component: null };
 };

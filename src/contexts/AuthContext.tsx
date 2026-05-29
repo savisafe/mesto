@@ -1,26 +1,22 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
-import type { PublicUser } from '@/db/schema';
+import React, { createContext, useContext } from 'react';
+import type { PublicUser, UserRole } from '@/db/schema';
 import { logoutAction } from '@/actions/auth';
 
 const DEFAULT_NAME = 'Пользователь';
 
 interface AuthContextType {
     user: PublicUser | null;
-    setUser: (user: PublicUser | null) => void;
     userName: string;
-    role: string | null;
-    loading: boolean;
+    role: UserRole | null;
     logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
-    setUser: () => {},
     userName: DEFAULT_NAME,
     role: null,
-    loading: false,
     logout: async () => {},
 });
 
@@ -29,23 +25,17 @@ interface AuthProviderProps {
     children: React.ReactNode;
 }
 
+// Источник истины — server layout. После logoutAction делается redirect,
+// layout перерендеривается, новый initialUser приходит сюда пропсом —
+// поэтому никакого внутреннего setUser/useState не нужно.
 export function AuthProvider({ initialUser, children }: AuthProviderProps) {
-    const [user, setUser] = useState<PublicUser | null>(initialUser);
-
-    const logout = async () => {
-        setUser(null);
-        await logoutAction();
-    };
-
     return (
         <AuthContext.Provider
             value={{
-                user,
-                setUser,
-                userName: user?.name ?? DEFAULT_NAME,
-                role: user?.role ?? null,
-                loading: false,
-                logout,
+                user: initialUser,
+                userName: initialUser?.name ?? DEFAULT_NAME,
+                role: initialUser?.role ?? null,
+                logout: logoutAction,
             }}
         >
             {children}

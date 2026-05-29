@@ -11,29 +11,25 @@ import type { CreateBusinessInput, UpdateBusinessInput } from '@/services/busine
 import type { Business } from '@/db/schema';
 import { useAuth } from './AuthContext';
 
+interface MutationResult {
+    success: boolean;
+    error?: string;
+}
+
 interface BusinessContextType {
     businessesData: Business[];
-    setBusinessesData: (businesses: Business[]) => void;
     currentBusiness: string;
-    setCurrentBusiness: (businessId: string) => void;
     loading: boolean;
-    error: string | null;
     fetchBusinesses: () => Promise<void>;
-    createBusiness: (input: CreateBusinessInput) => Promise<{ success: boolean; error?: string }>;
-    updateBusiness: (
-        id: string,
-        input: UpdateBusinessInput,
-    ) => Promise<{ success: boolean; error?: string }>;
-    deleteBusiness: (id: string) => Promise<{ success: boolean; error?: string }>;
+    createBusiness: (input: CreateBusinessInput) => Promise<MutationResult>;
+    updateBusiness: (id: string, input: UpdateBusinessInput) => Promise<MutationResult>;
+    deleteBusiness: (id: string) => Promise<MutationResult>;
 }
 
 const BusinessContext = createContext<BusinessContextType>({
     businessesData: [],
-    setBusinessesData: () => {},
     currentBusiness: '',
-    setCurrentBusiness: () => {},
     loading: false,
-    error: null,
     fetchBusinesses: async () => {},
     createBusiness: async () => ({ success: false }),
     updateBusiness: async () => ({ success: false }),
@@ -45,19 +41,13 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const [businessesData, setBusinessesData] = useState<Business[]>([]);
     const [currentBusiness, setCurrentBusiness] = useState<string>('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const fetchBusinesses = useCallback(async () => {
         if (!user) return;
         setLoading(true);
-        setError(null);
         try {
             const result = await listBusinessesAction();
-            if (!result.ok) {
-                setError(result.error);
-            } else {
-                setBusinessesData(result.data);
-            }
+            if (result.ok) setBusinessesData(result.data);
         } finally {
             setLoading(false);
         }
@@ -78,15 +68,11 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         }
     }, [businessesData, currentBusiness]);
 
-    const createBusiness = async (input: CreateBusinessInput) => {
+    const createBusiness = async (input: CreateBusinessInput): Promise<MutationResult> => {
         setLoading(true);
-        setError(null);
         try {
             const result = await createBusinessAction(input);
-            if (!result.ok) {
-                setError(result.error);
-                return { success: false, error: result.error };
-            }
+            if (!result.ok) return { success: false, error: result.error };
             setBusinessesData((prev) => [...prev, result.data]);
             return { success: true };
         } finally {
@@ -94,33 +80,26 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const updateBusiness = async (id: string, input: UpdateBusinessInput) => {
+    const updateBusiness = async (
+        id: string,
+        input: UpdateBusinessInput,
+    ): Promise<MutationResult> => {
         setLoading(true);
-        setError(null);
         try {
             const result = await updateBusinessAction(id, input);
-            if (!result.ok) {
-                setError(result.error);
-                return { success: false, error: result.error };
-            }
-            setBusinessesData((prev) =>
-                prev.map((b) => (b.id === id ? result.data : b)),
-            );
+            if (!result.ok) return { success: false, error: result.error };
+            setBusinessesData((prev) => prev.map((b) => (b.id === id ? result.data : b)));
             return { success: true };
         } finally {
             setLoading(false);
         }
     };
 
-    const deleteBusiness = async (id: string) => {
+    const deleteBusiness = async (id: string): Promise<MutationResult> => {
         setLoading(true);
-        setError(null);
         try {
             const result = await deleteBusinessAction(id);
-            if (!result.ok) {
-                setError(result.error);
-                return { success: false, error: result.error };
-            }
+            if (!result.ok) return { success: false, error: result.error };
             setBusinessesData((prev) => prev.filter((b) => b.id !== id));
             if (currentBusiness === id) {
                 const remaining = businessesData.filter((b) => b.id !== id);
@@ -136,11 +115,8 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         <BusinessContext.Provider
             value={{
                 businessesData,
-                setBusinessesData,
                 currentBusiness,
-                setCurrentBusiness,
                 loading,
-                error,
                 fetchBusinesses,
                 createBusiness,
                 updateBusiness,
