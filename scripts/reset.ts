@@ -26,9 +26,15 @@ neonConfig.webSocketConstructor = ws;
 async function main() {
     const pool = new Pool({ connectionString: url });
 
-    // Дропаем таблицы по одной, без DROP SCHEMA — так не задеваем
-    // permissions/search_path на схему public (на Neon это иногда
-    // приводит к 'permission denied for schema public').
+    console.log('DB host:', new URL(url).host);
+
+    // 1. Дропаем журнал миграций Drizzle (он живёт в схеме drizzle,
+    //    DROP SCHEMA public его не трогает — без этого migrate решит
+    //    что миграции уже накатаны и не создаст таблицы).
+    await pool.query(`DROP TABLE IF EXISTS drizzle.__drizzle_migrations CASCADE`);
+
+    // 2. Дропаем все пользовательские таблицы в public по одной
+    //    (без DROP SCHEMA — на Neon может ломать permissions).
     const { rows: tables } = await pool.query<{ tablename: string }>(
         `SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
     );
@@ -41,9 +47,17 @@ async function main() {
         }
     }
 
+    // 3. Применяем миграции с нуля.
     console.log('Applying migrations...');
     const db = drizzle(pool);
     await migrate(db, { migrationsFolder: './drizzle' });
+
+    // 4. Проверяем что таблицы реально появились.
+    const { rows: after } = await pool.query<{ tablename: string }>(
+        `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`,
+    );
+    console.log(`Tables after migrate (${after.length}):`, after.map((t) => t.tablename).join(', '));
+
     console.log('Database reset complete.');
     await pool.end();
 }
