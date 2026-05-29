@@ -29,6 +29,20 @@
       "when": 1780043037410,
       "tag": "0003_real_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780084914192,
+      "tag": "0004_burly_meltdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780085647986,
+      "tag": "0005_powerful_longshot",
+      "breakpoints": true
     }
   ]
 }

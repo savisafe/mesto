@@ -8,6 +8,8 @@ export const businesses = pgTable(
         name: text('name').notNull(),
         description: text('description'),
         isActive: boolean('is_active').notNull().default(true),
+        // IANA-зона бизнеса. Все «локальные» часы графика и слоты резолвятся в ней.
+        timezone: text('timezone').notNull().default('Asia/Almaty'),
         ownerId: uuid('owner_id')
             .notNull()
             .references(() => users.id),

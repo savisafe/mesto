@@ -10,9 +10,11 @@ import { routes } from '@/routes/routes';
 const protectedLinks = [
     { href: routes.DASHBOARD, label: 'Дашборд' },
     { href: routes.CALENDAR, label: 'Календарь' },
+    { href: routes.SCHEDULE, label: 'График' },
     { href: routes.CLIENTS, label: 'Клиенты' },
     { href: routes.EMPLOYEES, label: 'Сотрудники' },
     { href: routes.MY_BUSINESS, label: 'Бизнесы' },
+    { href: routes.SETTINGS_API, label: 'API' },
 ];
 
 const publicLinks: { href: string; label: string }[] = [];

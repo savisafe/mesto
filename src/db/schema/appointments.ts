@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { businesses } from './businesses';
 import { clients } from './clients';
 import { services } from './services';
@@ -47,6 +47,12 @@ export const appointments = pgTable(
         index('appointments_business_starts_idx').on(t.businessId, t.startsAt),
         index('appointments_employee_starts_idx').on(t.employeeUserId, t.startsAt),
         index('appointments_client_idx').on(t.clientId),
+        // Идемпотентность входящих записей из бота: (бизнес, ключ) уникальны;
+        // NULL-ключи (ручные записи) не конфликтуют.
+        uniqueIndex('appointments_business_idempotency_idx').on(
+            t.businessId,
+            t.externalIdempotencyKey,
+        ),
     ],
 );
 

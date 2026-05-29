@@ -11,4 +11,6 @@ export const routes = {
     REVIEWS: '/reviews',
     FINANCE: '/finance',
     SETTINGS: '/settings',
+    SCHEDULE: '/schedule',
+    SETTINGS_API: '/settings/api',
 }

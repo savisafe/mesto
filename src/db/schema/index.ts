@@ -7,3 +7,6 @@ export * from './clients';
 export * from './invites';
 export * from './services';
 export * from './appointments';
+export * from './work-schedules';
+export * from './time-off';
+export * from './api-keys';

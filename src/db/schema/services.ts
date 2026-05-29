@@ -1,4 +1,13 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import {
+    pgTable,
+    uuid,
+    text,
+    integer,
+    boolean,
+    timestamp,
+    index,
+    uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { businesses } from './businesses';
 
 export const services = pgTable(
@@ -9,6 +18,8 @@ export const services = pgTable(
             .notNull()
             .references(() => businesses.id, { onDelete: 'cascade' }),
         name: text('name').notNull(),
+        // Стабильный id услуги в каталоге бота — точный матч входящих записей
+        externalId: text('external_id'),
         // в минимальных единицах валюты (5000 = 5000 ₸ если KZT)
         amount: integer('amount').notNull().default(0),
         currency: text('currency').notNull().default('KZT'),
@@ -20,7 +31,10 @@ export const services = pgTable(
             .defaultNow()
             .$onUpdate(() => new Date()),
     },
-    (t) => [index('services_business_id_idx').on(t.businessId)],
+    (t) => [
+        index('services_business_id_idx').on(t.businessId),
+        uniqueIndex('services_business_external_idx').on(t.businessId, t.externalId),
+    ],
 );
 
 export type Service = typeof services.$inferSelect;

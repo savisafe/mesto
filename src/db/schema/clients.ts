@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { businesses } from './businesses';
 
 export const clients = pgTable(
@@ -11,6 +11,8 @@ export const clients = pgTable(
         name: text('name').notNull(),
         phone: text('phone').notNull(),
         email: text('email'),
+        // Telegram user id (если знаем) — вторичный ключ дедупа для записей из бота
+        telegramId: text('telegram_id'),
         note: text('note'),
         isBlacklisted: boolean('is_blacklisted').notNull().default(false),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -23,6 +25,8 @@ export const clients = pgTable(
         index('clients_business_id_idx').on(t.businessId),
         index('clients_name_idx').on(t.name),
         index('clients_phone_idx').on(t.phone),
+        // NULL-значения в Postgres различны → клиенты без telegram_id не конфликтуют
+        uniqueIndex('clients_business_telegram_idx').on(t.businessId, t.telegramId),
     ],
 );
 

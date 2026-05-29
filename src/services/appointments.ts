@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, asc, eq, gt, gte, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lt, or } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     appointments,
@@ -13,6 +13,7 @@ import {
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { checkBusinessAccess } from './_access';
+import { hasAppointmentConflict } from './availability';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -145,35 +146,6 @@ export async function listAppointments(
     return { ok: true, data: await loadDetails(rows) };
 }
 
-// Проверяет нет ли пересечения у того же сотрудника в интервале [startsAt, endsAt).
-// Игнорирует cancelled/no_show и саму запись (для update).
-async function hasConflict(
-    businessId: string,
-    employeeUserId: string,
-    startsAt: Date,
-    endsAt: Date,
-    excludeAppointmentId?: string,
-): Promise<boolean> {
-    const conditions = [
-        eq(appointments.businessId, businessId),
-        eq(appointments.employeeUserId, employeeUserId),
-        or(eq(appointments.status, 'scheduled'), eq(appointments.status, 'completed')),
-        // [existing.startsAt, existing.endsAt) пересекается с [startsAt, endsAt)
-        // ⇔ existing.startsAt < endsAt AND existing.endsAt > startsAt
-        lt(appointments.startsAt, endsAt),
-        gt(appointments.endsAt, startsAt),
-    ];
-    if (excludeAppointmentId) {
-        conditions.push(sql`${appointments.id} <> ${excludeAppointmentId}`);
-    }
-    const [hit] = await db
-        .select({ id: appointments.id })
-        .from(appointments)
-        .where(and(...conditions))
-        .limit(1);
-    return !!hit;
-}
-
 async function ensureEmployeeOfBusiness(
     businessId: string,
     employeeUserId: string,
@@ -253,8 +225,11 @@ export async function createAppointment(
 
     const endsAt = new Date(input.startsAt.getTime() + input.durationMinutes * 60_000);
 
+    // Ручной календарь проверяет только пересечение записей. Рабочие часы и блоки
+    // здесь НЕ навязываются — владелец может записать в любое время (override).
+    // Часы/блоки enforce'ит только внешний API бота (services/external + availability.validateSlot).
     if (input.employeeUserId) {
-        const conflict = await hasConflict(
+        const conflict = await hasAppointmentConflict(
             input.businessId,
             input.employeeUserId,
             input.startsAt,
@@ -342,14 +317,15 @@ export async function updateAppointment(
     if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
     if (input.status !== undefined) updates.status = input.status;
 
-    // Проверка конфликта если меняется время/сотрудник и статус всё ещё активный
+    // Проверка конфликта если меняется время/сотрудник и статус всё ещё активный.
+    // Рабочие часы/блоки в ручном календаре не навязываются (см. createAppointment).
     const newStatus = input.status ?? existing.status;
     if (
         nextEmployee &&
         (newStatus === 'scheduled' || newStatus === 'completed') &&
         (updates.startsAt !== undefined || updates.employeeUserId !== undefined)
     ) {
-        const conflict = await hasConflict(
+        const conflict = await hasAppointmentConflict(
             existing.businessId,
             nextEmployee,
             nextStartsAt,
