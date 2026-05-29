@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
-import { Popup } from '@/ui/popup/Popup';
+import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
@@ -171,29 +171,27 @@ export default function CalendarPage() {
                     )}
                 </section>
 
-                {createOpen && (
-                    <CreateAppointmentDialog
-                        businessId={currentBusiness}
-                        date={date}
-                        services={services}
-                        clients={clients}
-                        members={members}
-                        onClose={() => setCreateOpen(false)}
-                        onCreated={() => {
-                            setCreateOpen(false);
-                            fetchAppointments();
-                        }}
-                    />
-                )}
+                <CreateAppointmentDialog
+                    open={createOpen}
+                    businessId={currentBusiness}
+                    date={date}
+                    services={services}
+                    clients={clients}
+                    members={members}
+                    onClose={() => setCreateOpen(false)}
+                    onCreated={() => {
+                        setCreateOpen(false);
+                        fetchAppointments();
+                    }}
+                />
 
-                {servicesOpen && (
-                    <ServicesDialog
-                        businessId={currentBusiness}
-                        services={services}
-                        onClose={() => setServicesOpen(false)}
-                        onChanged={fetchReferences}
-                    />
-                )}
+                <ServicesDialog
+                    open={servicesOpen}
+                    businessId={currentBusiness}
+                    services={services}
+                    onClose={() => setServicesOpen(false)}
+                    onChanged={fetchReferences}
+                />
             </div>
         </LayoutPage>
     );
@@ -379,6 +377,7 @@ function EmptyState({
 }
 
 function CreateAppointmentDialog({
+    open,
     businessId,
     date,
     services,
@@ -387,6 +386,7 @@ function CreateAppointmentDialog({
     onClose,
     onCreated,
 }: {
+    open: boolean;
     businessId: string;
     date: string;
     services: Service[];
@@ -444,7 +444,28 @@ function CreateAppointmentDialog({
     };
 
     return (
-        <Popup title="Новая запись">
+        <Modal
+            open={open}
+            onClose={onClose}
+            title="Новая запись"
+            footer={
+                <>
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
+                    >
+                        Отмена
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl text-white font-medium cursor-pointer transition"
+                    >
+                        {submitting ? 'Создание...' : 'Создать'}
+                    </button>
+                </>
+            }
+        >
             <Field label="Услуга">
                 <select
                     value={serviceId}
@@ -506,14 +527,7 @@ function CreateAppointmentDialog({
                     className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
                 />
             </Field>
-
-            <div className="flex gap-2 mt-4">
-                <Button onClick={handleSubmit} loading={submitting}>
-                    Создать
-                </Button>
-                <Button onClick={onClose}>Отмена</Button>
-            </div>
-        </Popup>
+        </Modal>
     );
 }
 
@@ -525,11 +539,13 @@ const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
 };
 
 function ServicesDialog({
+    open,
     businessId,
     services,
     onClose,
     onChanged,
 }: {
+    open: boolean;
     businessId: string;
     services: Service[];
     onClose: () => void;
@@ -541,6 +557,7 @@ function ServicesDialog({
     const [duration, setDuration] = useState('60');
     const [durationUnit, setDurationUnit] = useState<DurationUnit>('minutes');
     const [submitting, setSubmitting] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
     const handleAdd = async () => {
         const amountNum = parseInt(amount, 10);
@@ -583,8 +600,13 @@ function ServicesDialog({
     };
 
     const handleDelete = async (id: string) => {
+        if (pendingDelete !== id) {
+            setPendingDelete(id);
+            return;
+        }
         const r = await deleteServiceAction(id);
         if (r.ok) {
+            setPendingDelete(null);
             onChanged();
         } else {
             alert('error', r.error);
@@ -592,37 +614,26 @@ function ServicesDialog({
     };
 
     return (
-        <Popup title="Услуги">
-            <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-                {services.length === 0 ? (
-                    <p className="text-purple-400 text-sm text-center py-4">
-                        Пока ничего нет
-                    </p>
-                ) : (
-                    services.map((s) => (
-                        <div
-                            key={s.id}
-                            className="flex items-center justify-between gap-2 bg-purple-800/40 border border-purple-700 rounded-xl p-3"
-                        >
-                            <div className="flex-1 min-w-0">
-                                <p className="text-white truncate">{s.name}</p>
-                                <p className="text-purple-300 text-xs">
-                                    {formatDuration(s.durationMinutes)} · {formatMoney(s.amount, s.currency)}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => handleDelete(s.id)}
-                                className="text-red-400 hover:text-red-300 text-sm cursor-pointer"
-                            >
-                                Удалить
-                            </button>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <div className="border-t border-purple-700/30 pt-4 space-y-3">
-                <p className="text-purple-300 text-sm">Новая услуга</p>
+        <Modal
+            open={open}
+            onClose={onClose}
+            title="Услуги"
+            footer={
+                <button
+                    onClick={onClose}
+                    className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-xl text-white font-medium cursor-pointer transition"
+                >
+                    Готово
+                </button>
+            }
+        >
+            {/* Форма создания идёт сверху как первичное действие.
+                Список услуг идёт ниже — рост списка не выбивает форму
+                из видимости, body модалки прокручивается. */}
+            <section className="mb-6 pb-6 border-b border-purple-700/30">
+                <h3 className="text-purple-300 text-xs uppercase tracking-wider font-medium mb-3">
+                    Новая услуга
+                </h3>
                 <Field label="Название">
                     <input
                         type="text"
@@ -663,14 +674,62 @@ function ServicesDialog({
                         </select>
                     </div>
                 </Field>
-                <div className="flex gap-2 mt-2">
-                    <Button onClick={handleAdd} loading={submitting}>
-                        Добавить
-                    </Button>
-                    <Button onClick={onClose}>Готово</Button>
-                </div>
-            </div>
-        </Popup>
+                <Button onClick={handleAdd} loading={submitting}>
+                    Добавить
+                </Button>
+            </section>
+
+            <section>
+                <h3 className="text-purple-300 text-xs uppercase tracking-wider font-medium mb-3">
+                    Все услуги ({services.length})
+                </h3>
+                {services.length === 0 ? (
+                    <p className="text-purple-400 text-sm text-center py-6">
+                        Пока пусто. Добавьте первую услугу выше.
+                    </p>
+                ) : (
+                    <ul className="space-y-2">
+                        {services.map((s) => (
+                            <li
+                                key={s.id}
+                                className="flex items-center justify-between gap-3 bg-white/5 border border-purple-700/40 rounded-xl p-3"
+                            >
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white truncate">{s.name}</p>
+                                    <p className="text-purple-300 text-xs mt-0.5">
+                                        {formatDuration(s.durationMinutes)} ·{' '}
+                                        {formatMoney(s.amount, s.currency)}
+                                    </p>
+                                </div>
+                                {pendingDelete === s.id ? (
+                                    <div className="flex gap-2 text-sm">
+                                        <button
+                                            onClick={() => handleDelete(s.id)}
+                                            className="text-red-400 hover:text-red-300 font-medium cursor-pointer"
+                                        >
+                                            Удалить?
+                                        </button>
+                                        <button
+                                            onClick={() => setPendingDelete(null)}
+                                            className="text-purple-300 hover:text-white cursor-pointer"
+                                        >
+                                            Нет
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => handleDelete(s.id)}
+                                        className="text-purple-400 hover:text-red-400 text-sm cursor-pointer"
+                                    >
+                                        Удалить
+                                    </button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+        </Modal>
     );
 }
 

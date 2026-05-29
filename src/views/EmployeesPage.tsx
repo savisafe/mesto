@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
 import { Input } from '@/ui/input/Input';
-import { Popup } from '@/ui/popup/Popup';
+import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
@@ -234,47 +234,55 @@ export default function EmployeesPage() {
                     </section>
                 )}
 
-                {inviteOpen && (
-                    <Popup title="Пригласить в команду">
-                        <Input
-                            type="email"
-                            placeholder="Email сотрудника"
-                            value={inviteForm.email}
-                            setValue={(v) => setInviteForm({ ...inviteForm, email: v })}
-                            transitionDelay={0.2}
-                        />
-                        <div className="mb-4">
-                            <p className="text-purple-300 text-sm mb-2">Роль</p>
-                            <div className="flex gap-2">
-                                {(['EMPLOYEE', 'MANAGER'] as const).map((role) => (
-                                    <button
-                                        key={role}
-                                        onClick={() => setInviteForm({ ...inviteForm, role })}
-                                        className={`flex-1 px-4 py-3 rounded-xl border transition cursor-pointer ${
-                                            inviteForm.role === role
-                                                ? 'bg-purple-600 border-purple-500 text-white'
-                                                : 'bg-purple-800/30 border-purple-700 text-purple-300 hover:bg-purple-800/50'
-                                        }`}
-                                    >
-                                        {ROLE_LABELS[role]}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                            <Button
-                                onClick={handleInvite}
-                                loading={submitting}
-                                transitionDelay={0.3}
+                <Modal
+                    open={inviteOpen}
+                    onClose={() => setInviteOpen(false)}
+                    title="Пригласить в команду"
+                    footer={
+                        <>
+                            <button
+                                onClick={() => setInviteOpen(false)}
+                                className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
                             >
-                                Отправить
-                            </Button>
-                            <Button onClick={() => setInviteOpen(false)} transitionDelay={0.35}>
                                 Отмена
-                            </Button>
+                            </button>
+                            <button
+                                onClick={handleInvite}
+                                disabled={submitting}
+                                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-xl text-white font-medium cursor-pointer transition"
+                            >
+                                {submitting ? 'Отправка...' : 'Отправить'}
+                            </button>
+                        </>
+                    }
+                >
+                    <Input
+                        type="email"
+                        placeholder="Email сотрудника"
+                        value={inviteForm.email}
+                        setValue={(v) => setInviteForm({ ...inviteForm, email: v })}
+                    />
+                    <div>
+                        <p className="text-purple-300 text-xs mb-2 uppercase tracking-wider font-medium">
+                            Роль
+                        </p>
+                        <div className="flex gap-2">
+                            {(['EMPLOYEE', 'MANAGER'] as const).map((role) => (
+                                <button
+                                    key={role}
+                                    onClick={() => setInviteForm({ ...inviteForm, role })}
+                                    className={`flex-1 px-4 py-3 rounded-xl border transition cursor-pointer ${
+                                        inviteForm.role === role
+                                            ? 'bg-purple-600 border-purple-500 text-white'
+                                            : 'bg-purple-800/30 border-purple-700 text-purple-300 hover:bg-purple-800/50'
+                                    }`}
+                                >
+                                    {ROLE_LABELS[role]}
+                                </button>
+                            ))}
                         </div>
-                    </Popup>
-                )}
+                    </div>
+                </Modal>
             </div>
         </LayoutPage>
     );
