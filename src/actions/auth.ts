@@ -26,18 +26,32 @@ async function startSession(userId: string): Promise<void> {
     await setSessionCookie(token, expiresAt);
 }
 
-export async function registerAction(input: RegisterInput): Promise<ActionResult> {
+export async function registerAction(
+    input: RegisterInput,
+    next?: string,
+): Promise<ActionResult> {
     const result = await register(input);
     if (!result.ok) return { ok: false, error: result.error };
     await startSession(result.data.id);
-    redirect('/dashboard');
+    redirect(safeNext(next));
 }
 
-export async function loginAction(input: LoginInput): Promise<ActionResult> {
+// Защита: пускаем только относительные пути внутри сайта,
+// чтобы next=<external-url> не превратился в open redirect.
+function safeNext(next?: string): string {
+    if (!next) return '/dashboard';
+    if (next.startsWith('/') && !next.startsWith('//')) return next;
+    return '/dashboard';
+}
+
+export async function loginAction(
+    input: LoginInput,
+    next?: string,
+): Promise<ActionResult> {
     const result = await login(input);
     if (!result.ok) return { ok: false, error: result.error };
     await startSession(result.data.id);
-    redirect('/dashboard');
+    redirect(safeNext(next));
 }
 
 export async function requestMagicLinkAction(email: string): Promise<ActionResult> {

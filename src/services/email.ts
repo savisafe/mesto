@@ -57,3 +57,24 @@ export async function sendMagicLinkEmail(to: string, token: string): Promise<voi
         `,
     });
 }
+
+export async function sendInviteEmail(
+    to: string,
+    businessName: string,
+    inviterName: string,
+    token: string,
+): Promise<void> {
+    const url = `${APP_URL}/api/invites/${token}`;
+    await send({
+        to,
+        subject: `Приглашение в «${businessName}» — Mesto`,
+        html: `
+            <p>Здравствуйте!</p>
+            <p>${inviterName} приглашает вас в команду «${businessName}» на Mesto.</p>
+            <p>Принять приглашение: <a href="${url}">${url}</a></p>
+            <p>Если у вас ещё нет аккаунта Mesto — сначала зарегистрируйтесь с этим email,
+               затем перейдите по ссылке снова.</p>
+            <p>Ссылка действует 7 дней.</p>
+        `,
+    });
+}

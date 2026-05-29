@@ -15,6 +15,13 @@
       "when": 1780036456412,
       "tag": "0001_overconfident_titania",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780041032408,
+      "tag": "0002_lonely_jane_foster",
+      "breakpoints": true
     }
   ]
 }

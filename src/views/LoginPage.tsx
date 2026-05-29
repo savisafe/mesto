@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Input } from '@/ui/input/Input';
 import { Button } from '@/ui/button/Button';
@@ -12,6 +13,8 @@ import { routes } from '@/routes/routes';
 
 export default function LoginPage() {
     const alert = useNotification();
+    const searchParams = useSearchParams();
+    const next = searchParams?.get('next') ?? undefined;
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -24,7 +27,7 @@ export default function LoginPage() {
 
         setLoading(true);
         try {
-            const result = await loginAction({ email, password });
+            const result = await loginAction({ email, password }, next);
             // успешный логин → redirect внутри action, сюда не доберёмся.
             if (!result.ok) {
                 alert('error', result.error);
