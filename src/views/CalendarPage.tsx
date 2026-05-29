@@ -396,12 +396,26 @@ function CreateAppointmentDialog({
     onCreated: () => void;
 }) {
     const alert = useNotification();
-    const [serviceId, setServiceId] = useState<string>(services[0]?.id ?? '');
-    const [clientId, setClientId] = useState<string>(clients[0]?.id ?? '');
+    const [serviceId, setServiceId] = useState<string>('');
+    const [clientId, setClientId] = useState<string>('');
     const [employeeId, setEmployeeId] = useState<string>(EMPLOYEE_ANY);
     const [time, setTime] = useState('10:00');
     const [notes, setNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
+
+    // Сбрасываем форму на «дефолт первого элемента» каждый раз когда модалку
+    // открывают: иначе useState инициализируется на первом монтировании
+    // (когда services/clients ещё пустые, потому что fetchReferences не успел)
+    // → селекты визуально показывают первый option, но state остаётся ''.
+    useEffect(() => {
+        if (!open) return;
+        setServiceId(services[0]?.id ?? '');
+        setClientId(clients[0]?.id ?? '');
+        setEmployeeId(EMPLOYEE_ANY);
+        setTime('10:00');
+        setNotes('');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     const selectedService = useMemo(
         () => services.find((s) => s.id === serviceId),
