@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
-import { Input } from '@/ui/input/Input';
 import { Popup } from '@/ui/popup/Popup';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
@@ -250,7 +249,7 @@ function EmployeeFilter({
 }) {
     const options: { value: string; label: string }[] = [
         { value: 'all', label: 'Все' },
-        { value: EMPLOYEE_ANY, label: 'Без мастера' },
+        { value: EMPLOYEE_ANY, label: 'Без сотрудника' },
         ...members.map((m) => ({ value: m.id, label: m.name })),
     ];
     return (
@@ -454,7 +453,7 @@ function CreateAppointmentDialog({
                 >
                     {services.map((s) => (
                         <option key={s.id} value={s.id}>
-                            {s.name} · {s.durationMinutes}мин · {formatMoney(s.amount, s.currency)}
+                            {s.name} · {formatDuration(s.durationMinutes)} · {formatMoney(s.amount, s.currency)}
                         </option>
                     ))}
                 </select>
@@ -474,13 +473,13 @@ function CreateAppointmentDialog({
                 </select>
             </Field>
 
-            <Field label="Мастер">
+            <Field label="Сотрудник">
                 <select
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value)}
                     className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
                 >
-                    <option value={EMPLOYEE_ANY}>Без мастера</option>
+                    <option value={EMPLOYEE_ANY}>Не назначен</option>
                     {members.map((m) => (
                         <option key={m.id} value={m.id}>
                             {m.name}
@@ -503,7 +502,7 @@ function CreateAppointmentDialog({
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Комментарий для мастера"
+                    placeholder="Комментарий для сотрудника"
                     className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
                 />
             </Field>
@@ -517,6 +516,13 @@ function CreateAppointmentDialog({
         </Popup>
     );
 }
+
+type DurationUnit = 'minutes' | 'hours' | 'days';
+const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
+    minutes: 1,
+    hours: 60,
+    days: 60 * 24,
+};
 
 function ServicesDialog({
     businessId,
@@ -533,6 +539,7 @@ function ServicesDialog({
     const [name, setName] = useState('');
     const [amount, setAmount] = useState('');
     const [duration, setDuration] = useState('60');
+    const [durationUnit, setDurationUnit] = useState<DurationUnit>('minutes');
     const [submitting, setSubmitting] = useState(false);
 
     const handleAdd = async () => {
@@ -551,18 +558,21 @@ function ServicesDialog({
             return;
         }
 
+        const totalMinutes = durationNum * UNIT_TO_MINUTES[durationUnit];
+
         setSubmitting(true);
         try {
             const r = await createServiceAction({
                 businessId,
                 name,
                 amount: amountNum,
-                durationMinutes: durationNum,
+                durationMinutes: totalMinutes,
             });
             if (r.ok) {
                 setName('');
                 setAmount('');
                 setDuration('60');
+                setDurationUnit('minutes');
                 onChanged();
             } else {
                 alert('error', r.error);
@@ -597,7 +607,7 @@ function ServicesDialog({
                             <div className="flex-1 min-w-0">
                                 <p className="text-white truncate">{s.name}</p>
                                 <p className="text-purple-300 text-xs">
-                                    {s.durationMinutes} мин · {formatMoney(s.amount, s.currency)}
+                                    {formatDuration(s.durationMinutes)} · {formatMoney(s.amount, s.currency)}
                                 </p>
                             </div>
                             <button
@@ -613,26 +623,46 @@ function ServicesDialog({
 
             <div className="border-t border-purple-700/30 pt-4 space-y-3">
                 <p className="text-purple-300 text-sm">Новая услуга</p>
-                <Input
-                    type="text"
-                    placeholder="Название (Маникюр, Стрижка...)"
-                    value={name}
-                    setValue={setName}
-                />
-                <div className="grid grid-cols-2 gap-2">
-                    <Input
+                <Field label="Название">
+                    <input
+                        type="text"
+                        placeholder="например: консультация, замена масла, окрашивание"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400 text-sm"
+                    />
+                </Field>
+                <Field label="Цена (₸)">
+                    <input
                         type="number"
-                        placeholder="Цена ₸"
+                        min="0"
+                        placeholder="0"
                         value={amount}
-                        setValue={setAmount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
                     />
-                    <Input
-                        type="number"
-                        placeholder="Длительность, мин"
-                        value={duration}
-                        setValue={setDuration}
-                    />
-                </div>
+                </Field>
+                <Field label="Длительность">
+                    <div className="flex gap-2">
+                        <input
+                            type="number"
+                            min="1"
+                            placeholder="60"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            className="flex-1 px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white placeholder-purple-400"
+                        />
+                        <select
+                            value={durationUnit}
+                            onChange={(e) => setDurationUnit(e.target.value as DurationUnit)}
+                            className="px-3 py-2.5 bg-purple-800/40 border border-purple-700 rounded-xl text-white"
+                        >
+                            <option value="minutes">минуты</option>
+                            <option value="hours">часы</option>
+                            <option value="days">дни</option>
+                        </select>
+                    </div>
+                </Field>
                 <div className="flex gap-2 mt-2">
                     <Button onClick={handleAdd} loading={submitting}>
                         Добавить
@@ -688,4 +718,21 @@ function formatTime(d: Date): string {
 function formatMoney(amount: number, currency: string): string {
     const symbol = currency === 'KZT' ? '₸' : currency === 'RUB' ? '₽' : currency;
     return `${amount.toLocaleString('ru-RU')} ${symbol}`;
+}
+
+// Выбирает наибольшую красивую единицу, в которой число остаётся целым.
+// 90 мин → "90 мин" (не делится на час нацело)
+// 60 мин → "1 час", 120 мин → "2 ч"
+// 1440 мин → "1 день", 4320 мин → "3 дн"
+function formatDuration(minutes: number): string {
+    if (minutes <= 0) return '0';
+    if (minutes >= 1440 && minutes % 1440 === 0) {
+        const days = minutes / 1440;
+        return `${days} ${days === 1 ? 'день' : 'дн'}`;
+    }
+    if (minutes >= 60 && minutes % 60 === 0) {
+        const hours = minutes / 60;
+        return `${hours} ${hours === 1 ? 'час' : 'ч'}`;
+    }
+    return `${minutes} мин`;
 }

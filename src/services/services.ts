@@ -54,8 +54,8 @@ export async function createService(input: CreateServiceInput): Promise<ServiceR
     if (!Number.isInteger(input.amount) || input.amount < 0) {
         return { ok: false, error: 'Цена должна быть неотрицательным целым', code: 'INVALID_AMOUNT' };
     }
-    if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 1440) {
-        return { ok: false, error: 'Длительность от 1 до 1440 минут', code: 'INVALID_DURATION' };
+    if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 43200) {
+        return { ok: false, error: 'Длительность от 1 минуты до 30 дней', code: 'INVALID_DURATION' };
     }
 
     const [created] = await db
@@ -97,8 +97,8 @@ export async function updateService(
     }
     if (input.currency !== undefined) updates.currency = input.currency;
     if (input.durationMinutes !== undefined) {
-        if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 1440) {
-            return { ok: false, error: 'Некорректная длительность', code: 'INVALID_DURATION' };
+        if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 43200) {
+            return { ok: false, error: 'Длительность от 1 минуты до 30 дней', code: 'INVALID_DURATION' };
         }
         updates.durationMinutes = input.durationMinutes;
     }

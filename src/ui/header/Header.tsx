@@ -8,7 +8,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/routes/routes';
 
 const protectedLinks = [
-    { href: routes.DASHBOARD, label: 'Панель управления' },
+    { href: routes.DASHBOARD, label: 'Дашборд' },
+    { href: routes.CALENDAR, label: 'Календарь' },
+    { href: routes.CLIENTS, label: 'Клиенты' },
+    { href: routes.EMPLOYEES, label: 'Сотрудники' },
+    { href: routes.MY_BUSINESS, label: 'Бизнесы' },
 ];
 
 const publicLinks: { href: string; label: string }[] = [];

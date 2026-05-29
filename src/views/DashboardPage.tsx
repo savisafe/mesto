@@ -21,7 +21,7 @@ export function DashboardView({ stats, userName }: Props) {
                 </header>
 
                 <section
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10"
+                    className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
                     aria-label="Сводка"
                 >
                     <StatCard
@@ -31,6 +31,11 @@ export function DashboardView({ stats, userName }: Props) {
                     />
                     <StatCard label="Клиентов" value={stats.totalClients} href="/clients" />
                     <StatCard label="Сотрудников" value={stats.totalMembers} href="/employees" />
+                    <StatCard
+                        label="Записей в работе"
+                        value={stats.scheduledAppointments}
+                        href="/calendar"
+                    />
                 </section>
 
                 <section className="mb-10">
@@ -75,7 +80,7 @@ export function DashboardView({ stats, userName }: Props) {
     );
 }
 
-const comingSoon = ['Финансы и выручка', 'Отзывы', 'Уведомления клиентам'];
+const comingSoon = ['Финансы', 'Отзывы', 'Уведомления клиентам'];
 
 function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
     return (

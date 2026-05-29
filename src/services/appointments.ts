@@ -42,7 +42,7 @@ export interface ListAppointmentsInput {
     from: Date;
     /** Исключительно: ISO дата-время конца окна */
     to: Date;
-    employeeUserId?: string | null; // null = только без мастера, undefined = все
+    employeeUserId?: string | null; // null = только без сотрудника, undefined = все
 }
 
 export interface CreateAppointmentInput {
@@ -145,7 +145,7 @@ export async function listAppointments(
     return { ok: true, data: await loadDetails(rows) };
 }
 
-// Проверяет нет ли пересечения у того же мастера в интервале [startsAt, endsAt).
+// Проверяет нет ли пересечения у того же сотрудника в интервале [startsAt, endsAt).
 // Игнорирует cancelled/no_show и саму запись (для update).
 async function hasConflict(
     businessId: string,
@@ -216,8 +216,8 @@ export async function createAppointment(
     const access = await checkBusinessAccess(input.businessId, user.id);
     if (!access) return FORBIDDEN;
 
-    if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 1440) {
-        return { ok: false, error: 'Длительность от 1 до 1440 минут', code: 'INVALID_DURATION' };
+    if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 43200) {
+        return { ok: false, error: 'Длительность от 1 минуты до 30 дней', code: 'INVALID_DURATION' };
     }
     if (!(input.startsAt instanceof Date) || isNaN(input.startsAt.getTime())) {
         return { ok: false, error: 'Некорректная дата начала', code: 'INVALID_STARTS_AT' };
@@ -310,8 +310,8 @@ export async function updateAppointment(
     const nextEmployee = input.employeeUserId !== undefined ? input.employeeUserId : existing.employeeUserId;
 
     if (input.startsAt !== undefined || input.durationMinutes !== undefined) {
-        if (!Number.isInteger(nextDuration) || nextDuration <= 0 || nextDuration > 1440) {
-            return { ok: false, error: 'Некорректная длительность', code: 'INVALID_DURATION' };
+        if (!Number.isInteger(nextDuration) || nextDuration <= 0 || nextDuration > 43200) {
+            return { ok: false, error: 'Длительность от 1 минуты до 30 дней', code: 'INVALID_DURATION' };
         }
         updates.startsAt = nextStartsAt;
         updates.endsAt = nextEndsAt;
@@ -342,7 +342,7 @@ export async function updateAppointment(
     if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
     if (input.status !== undefined) updates.status = input.status;
 
-    // Проверка конфликта если меняется время/мастер и статус всё ещё активный
+    // Проверка конфликта если меняется время/сотрудник и статус всё ещё активный
     const newStatus = input.status ?? existing.status;
     if (
         nextEmployee &&
