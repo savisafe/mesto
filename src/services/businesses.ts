@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     businesses,
@@ -8,6 +8,9 @@ import {
     type NewBusiness,
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
+import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
+
+export { ARCHIVE_RETENTION_DAYS };
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -29,6 +32,8 @@ const FORBIDDEN = { ok: false as const, error: 'Нет доступа', code: 'F
 const UNAUTHORIZED = { ok: false as const, error: 'Не авторизован', code: 'UNAUTHORIZED' as const };
 const NOT_FOUND = { ok: false as const, error: 'Бизнес не найден', code: 'NOT_FOUND' as const };
 
+// listBusinesses возвращает только активные (не архивированные).
+// Архивные доступны через listArchivedBusinesses.
 export async function listBusinesses(): Promise<ServiceResult<Business[]>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
@@ -39,12 +44,27 @@ export async function listBusinesses(): Promise<ServiceResult<Business[]>> {
         .where(eq(businessMembers.userId, user.id));
     const memberBizIds = memberships.map((m) => m.businessId);
 
-    const where =
+    const ownership =
         memberBizIds.length > 0
             ? or(eq(businesses.ownerId, user.id), inArray(businesses.id, memberBizIds))
             : eq(businesses.ownerId, user.id);
 
-    const rows = await db.select().from(businesses).where(where);
+    const rows = await db
+        .select()
+        .from(businesses)
+        .where(and(ownership, isNull(businesses.archivedAt)));
+    return { ok: true, data: rows };
+}
+
+// Архивные бизнесы видит только владелец.
+export async function listArchivedBusinesses(): Promise<ServiceResult<Business[]>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+
+    const rows = await db
+        .select()
+        .from(businesses)
+        .where(and(eq(businesses.ownerId, user.id), isNotNull(businesses.archivedAt)));
     return { ok: true, data: rows };
 }
 
@@ -109,6 +129,9 @@ export async function updateBusiness(
     const [existing] = await db.select().from(businesses).where(eq(businesses.id, id)).limit(1);
     if (!existing) return NOT_FOUND;
     if (existing.ownerId !== user.id) return FORBIDDEN;
+    if (existing.archivedAt) {
+        return { ok: false, error: 'Бизнес в архиве — сначала восстановите', code: 'ARCHIVED' };
+    }
 
     const updates: Partial<NewBusiness> = {};
     if (input.name !== undefined) {
@@ -133,7 +156,29 @@ export async function updateBusiness(
     return { ok: true, data: biz };
 }
 
-export async function deleteBusiness(id: string): Promise<ServiceResult<{ id: string }>> {
+// Архивирование: бизнес скрывается из основного списка, в БД остаётся.
+// Через ARCHIVE_RETENTION_DAYS будет окончательно удалён cron'ом.
+export async function archiveBusiness(id: string): Promise<ServiceResult<Business>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+
+    const [existing] = await db.select().from(businesses).where(eq(businesses.id, id)).limit(1);
+    if (!existing) return NOT_FOUND;
+    if (existing.ownerId !== user.id) return FORBIDDEN;
+    if (existing.archivedAt) {
+        return { ok: true, data: existing }; // идемпотентно
+    }
+
+    const [biz] = await db
+        .update(businesses)
+        .set({ archivedAt: new Date() })
+        .where(eq(businesses.id, id))
+        .returning();
+    return { ok: true, data: biz };
+}
+
+// Восстановление: убираем archivedAt, бизнес возвращается в основной список.
+export async function unarchiveBusiness(id: string): Promise<ServiceResult<Business>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
 
@@ -141,6 +186,29 @@ export async function deleteBusiness(id: string): Promise<ServiceResult<{ id: st
     if (!existing) return NOT_FOUND;
     if (existing.ownerId !== user.id) return FORBIDDEN;
 
-    await db.delete(businesses).where(eq(businesses.id, id));
-    return { ok: true, data: { id } };
+    const [biz] = await db
+        .update(businesses)
+        .set({ archivedAt: null })
+        .where(eq(businesses.id, id))
+        .returning();
+    return { ok: true, data: biz };
 }
+
+// Окончательное удаление архивных бизнесов после истечения retention.
+// Вызывается из cron-эндпоинта /api/cron/purge-archived.
+// FK-каскады унесут клиентов, услуги, записи, инвайты, member-связи.
+export async function purgeExpiredArchives(): Promise<{ purged: number }> {
+    const threshold = new Date(Date.now() - ARCHIVE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+    const result = await db
+        .delete(businesses)
+        .where(
+            and(
+                isNotNull(businesses.archivedAt),
+                lt(businesses.archivedAt, threshold),
+            ),
+        )
+        .returning({ id: businesses.id });
+    return { purged: result.length };
+}
+
+

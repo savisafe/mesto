@@ -200,3 +200,5 @@ Reference: https://dikidi.net/1869595 — публичный виджет зап
 - `src/lib/push-notifications.ts` (когда дойдём до Web Push)
 - `src/app/api/push/subscribe/route.ts` — приём подписок
 - Колонка в users: `push_subscription_json`
+
+[ ] подумать про службу поддержки
