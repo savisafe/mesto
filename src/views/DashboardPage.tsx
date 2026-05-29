@@ -1,172 +1,132 @@
-'use client';
+import Link from 'next/link';
+import { LayoutPage } from '@/ui/layouts/LayoutPage';
+import type { DashboardStats } from '@/services/dashboard';
 
-import {useState} from 'react';
-import {EmployeeStatus, RecordEntry, Review} from "@/types/types";
-import {LayoutPage} from "@/ui/layouts/LayoutPage";
-import {useAccess} from "@/hooks/useAccess";
-import {Select} from "@/ui/select/Select";
-import {WidgetCard} from "@/ui/widget-card/WidgetCard";
-import {useBusiness} from "@/contexts/BusinessContext";
+interface Props {
+    stats: DashboardStats;
+    userName: string;
+}
 
-//TODO раскидать моки когда будет понятна структура данных
-const recordsToday = 7;
-const revenueToday = 25000;
-const revenueWeek = 128000;
-const recentRecords: RecordEntry[] = [
-    {time: '09:00', client: 'Дарья', master: 'Елена'},
-    {time: '10:30', client: 'Зарина', master: 'Дарья'},
-    {time: '12:00', client: 'Анна', master: 'Виктория'}
-];
-const employeeActivity: EmployeeStatus[] = [
-    {name: 'Анна', label: '🟢 В работе (13:00 – 14:00)'},
-    {name: 'Виктор', label: '🕑 Свободен до 15:00'},
-    {name: 'Оксана', label: '⛔ Сегодня выходной'}
-];
-const recentReviews: Review[] = [
-    {rating: 5, comment: 'Спасибо за шикарные брови!', client: 'Алина'},
-    {rating: 4, comment: 'Отлично, но пришлось ждать.', client: 'Диана'}
-];
-
-export default function DashboardPage() {
-    const {businessesData, currentBusiness} = useBusiness();
-    const [selectedBusiness, setSelectedBusiness] = useState<string>(currentBusiness);
-    const access = useAccess('OWNER', 'ADMIN');
-
-    if (access.status !== 'ok') {
-        return <LayoutPage>{access.component}</LayoutPage>;
+export function DashboardView({ stats, userName }: Props) {
+    if (stats.businesses.length === 0) {
+        return <EmptyDashboard userName={userName} />;
     }
-
-    const availableWidgets = [
-        {
-            id: 'records',
-            title: `Сегодня: ${recordsToday} записей`,
-            content: (
-                <>
-                    <ul className="mt-4 space-y-1 text-sm">
-                        {recentRecords.map((r, i) => (
-                            <li key={i}>{r.time} — {r.client} ({r.master})</li>
-                        ))}
-                    </ul>
-                </>
-            ),
-            link: '/calendar',
-            buttonText: 'Перейти'
-        },
-        {
-            id: 'revenue', title: 'Выручка за день / неделю',
-            content: (
-                <>
-                    <p className="text-2xl font-bold">{revenueToday} ₸</p>
-                    <p className="text-sm text-purple-300 mt-2">За неделю: {revenueWeek} ₸</p>
-                </>
-            ),
-            link: '/finance',
-            buttonText: 'Перейти'
-        },
-        {
-            id: 'employees', title: 'Мои сотрудники',
-            content: (
-                <ul className="space-y-2 text-sm">
-                    {employeeActivity.map((e, i) => (
-                        <li key={i}>{e.name}: {e.label}</li>
-                    ))}
-                </ul>
-            ),
-            link: '/employees',
-            buttonText: 'Перейти'
-        },
-        {
-            id: 'reviews', title: 'Отзывы',
-            content: (
-                <ul className="space-y-2 text-sm">
-                    {recentReviews.map((rev, i) => (
-                        <li key={i}>{'⭐'.repeat(rev.rating)} — {rev.client}: {rev.comment}</li>
-                    ))}
-                </ul>
-            ),
-            link: '/reviews',
-            buttonText: 'Перейти'
-        },
-        {
-            id: 'my-business', title: 'Мои бизнесы',
-            content: (
-                <ul className="flex flex-col gap-3">
-                    {businessesData.map((b) => (
-                        <li key={b.id}>
-                            {b.name}
-                        </li>
-                    ))}
-                </ul>
-            ),
-            link: '/my-business',
-            buttonText: 'Перейти'
-        },
-        {
-            id: 'clients', title: 'Клиенская база',
-            content: (
-                <ul className="flex flex-col gap-3">
-
-                </ul>
-            ),
-            link: '/clients',
-            buttonText: 'Перейти'
-        }
-        // {
-        //     id: 'actions', title: 'Быстрые действия',
-        //     content: (
-        //         <div className="flex flex-col gap-3">
-        //             <Link href="/calendar">
-        //                 <Button>
-        //                     Добавить запись
-        //                 </Button>
-        //             </Link>
-        //             <Link href="/clients">
-        //                 <Button>
-        //                     Добавить клиента
-        //                 </Button>
-        //             </Link>
-        //             <Link href="/employees">
-        //                 <Button>
-        //                     Добавить сотрудника
-        //                 </Button>
-        //             </Link>
-        //         </div>
-        //     ),
-        //     link: null,
-        //     buttonText: 'Перейти'
-        // },
-    ];
 
     return (
         <LayoutPage>
-            <div className="flex items-center gap-5 mb-6">
-                <h1 className="text-3xl font-bold">
-                    Панель управления
-                </h1>
-                {businessesData.length > 1 && (
-                    <div className="w-64">
-                        <Select
-                            options={businessesData.map(biz => ({
-                                label: biz.name,
-                                value: biz.id,
-                            }))}
-                            value={selectedBusiness}
-                            onChange={(val) => setSelectedBusiness(val)}
-                        />
+            <div className="max-w-6xl mx-auto">
+                <header className="mb-10">
+                    <p className="text-purple-300 text-sm mb-1">Добро пожаловать</p>
+                    <h1 className="text-4xl font-bold text-white tracking-tight">{userName}</h1>
+                </header>
+
+                <section
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10"
+                    aria-label="Сводка"
+                >
+                    <StatCard
+                        label="Бизнесов"
+                        value={stats.businesses.length}
+                        href="/my-business"
+                    />
+                    <StatCard label="Клиентов" value={stats.totalClients} href="/clients" />
+                    <StatCard label="Сотрудников" value={stats.totalMembers} href="/employees" />
+                </section>
+
+                <section className="mb-10">
+                    <SectionHeader title="Мои бизнесы" href="/my-business" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {stats.businesses.map((biz) => (
+                            <article
+                                key={biz.id}
+                                className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 hover:bg-white/10 transition"
+                            >
+                                <h3 className="text-white font-semibold text-lg mb-1">
+                                    {biz.name}
+                                </h3>
+                                {biz.description && (
+                                    <p className="text-purple-300 text-sm line-clamp-2">
+                                        {biz.description}
+                                    </p>
+                                )}
+                                <p className="text-purple-400 text-xs mt-3">
+                                    {biz.isActive ? 'Активен' : 'Неактивен'}
+                                </p>
+                            </article>
+                        ))}
                     </div>
-                )}
+                </section>
+
+                <section>
+                    <SectionHeader title="Скоро" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {comingSoon.map((item) => (
+                            <div
+                                key={item}
+                                className="bg-white/[0.03] border border-purple-800/40 rounded-2xl p-4 text-purple-400 text-sm"
+                            >
+                                {item}
+                            </div>
+                        ))}
+                    </div>
+                </section>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {availableWidgets.map((widget) => (
-                    <WidgetCard
-                        key={widget.id}
-                        title={widget.title}
-                        link={widget.link}
-                        buttonText={widget.buttonText}
-                    >
-                        {widget.content}
-                    </WidgetCard>
-                ))}
+        </LayoutPage>
+    );
+}
+
+const comingSoon = [
+    'Календарь записей',
+    'Финансы и выручка',
+    'Отзывы',
+    'Уведомления клиентам',
+];
+
+function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
+    return (
+        <Link
+            href={href}
+            className="block bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 hover:bg-white/10 transition"
+        >
+            <p className="text-purple-300 text-sm mb-2">{label}</p>
+            <p className="text-3xl font-semibold text-white tracking-tight tabular-nums">{value}</p>
+        </Link>
+    );
+}
+
+function SectionHeader({ title, href }: { title: string; href?: string }) {
+    return (
+        <div className="flex justify-between items-baseline mb-4">
+            <h2 className="text-xl font-semibold text-white">{title}</h2>
+            {href && (
+                <Link
+                    href={href}
+                    className="text-sm text-purple-300 hover:text-white transition"
+                >
+                    Все →
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function EmptyDashboard({ userName }: { userName: string }) {
+    return (
+        <LayoutPage>
+            <div className="max-w-2xl mx-auto text-center mt-24">
+                <p className="text-purple-300 text-sm mb-2">Привет, {userName}</p>
+                <h1 className="text-4xl font-bold text-white tracking-tight mb-4">
+                    Создайте первый бизнес
+                </h1>
+                <p className="text-purple-300 mb-8">
+                    После создания вы увидите статистику, клиентов и записи в одном месте.
+                </p>
+                <Link
+                    href="/my-business"
+                    className="inline-block bg-white text-purple-900 font-semibold px-6 py-3 rounded-xl hover:bg-purple-50 transition"
+                >
+                    Создать бизнес
+                </Link>
             </div>
         </LayoutPage>
     );
