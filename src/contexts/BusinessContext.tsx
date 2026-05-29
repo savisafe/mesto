@@ -3,9 +3,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
     listBusinessesAction,
+    listArchivedBusinessesAction,
     createBusinessAction,
     updateBusinessAction,
-    deleteBusinessAction,
+    archiveBusinessAction,
+    unarchiveBusinessAction,
 } from '@/actions/businesses';
 import type { CreateBusinessInput, UpdateBusinessInput } from '@/services/businesses';
 import type { Business } from '@/db/schema';
@@ -18,27 +20,34 @@ interface MutationResult {
 
 interface BusinessContextType {
     businessesData: Business[];
+    archivedBusinesses: Business[];
     currentBusiness: string;
     loading: boolean;
     fetchBusinesses: () => Promise<void>;
+    fetchArchivedBusinesses: () => Promise<void>;
     createBusiness: (input: CreateBusinessInput) => Promise<MutationResult>;
     updateBusiness: (id: string, input: UpdateBusinessInput) => Promise<MutationResult>;
-    deleteBusiness: (id: string) => Promise<MutationResult>;
+    archiveBusiness: (id: string) => Promise<MutationResult>;
+    unarchiveBusiness: (id: string) => Promise<MutationResult>;
 }
 
 const BusinessContext = createContext<BusinessContextType>({
     businessesData: [],
+    archivedBusinesses: [],
     currentBusiness: '',
     loading: false,
     fetchBusinesses: async () => {},
+    fetchArchivedBusinesses: async () => {},
     createBusiness: async () => ({ success: false }),
     updateBusiness: async () => ({ success: false }),
-    deleteBusiness: async () => ({ success: false }),
+    archiveBusiness: async () => ({ success: false }),
+    unarchiveBusiness: async () => ({ success: false }),
 });
 
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [businessesData, setBusinessesData] = useState<Business[]>([]);
+    const [archivedBusinesses, setArchivedBusinesses] = useState<Business[]>([]);
     const [currentBusiness, setCurrentBusiness] = useState<string>('');
     const [loading, setLoading] = useState(false);
 
@@ -53,11 +62,18 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         }
     }, [user]);
 
+    const fetchArchivedBusinesses = useCallback(async () => {
+        if (!user) return;
+        const result = await listArchivedBusinessesAction();
+        if (result.ok) setArchivedBusinesses(result.data);
+    }, [user]);
+
     useEffect(() => {
         if (user) {
             fetchBusinesses();
         } else {
             setBusinessesData([]);
+            setArchivedBusinesses([]);
             setCurrentBusiness('');
         }
     }, [user, fetchBusinesses]);
@@ -95,12 +111,13 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const deleteBusiness = async (id: string): Promise<MutationResult> => {
+    const archiveBusiness = async (id: string): Promise<MutationResult> => {
         setLoading(true);
         try {
-            const result = await deleteBusinessAction(id);
+            const result = await archiveBusinessAction(id);
             if (!result.ok) return { success: false, error: result.error };
             setBusinessesData((prev) => prev.filter((b) => b.id !== id));
+            setArchivedBusinesses((prev) => [result.data, ...prev]);
             if (currentBusiness === id) {
                 const remaining = businessesData.filter((b) => b.id !== id);
                 setCurrentBusiness(remaining.length > 0 ? remaining[0].id : '');
@@ -111,16 +128,32 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const unarchiveBusiness = async (id: string): Promise<MutationResult> => {
+        setLoading(true);
+        try {
+            const result = await unarchiveBusinessAction(id);
+            if (!result.ok) return { success: false, error: result.error };
+            setArchivedBusinesses((prev) => prev.filter((b) => b.id !== id));
+            setBusinessesData((prev) => [...prev, result.data]);
+            return { success: true };
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <BusinessContext.Provider
             value={{
                 businessesData,
+                archivedBusinesses,
                 currentBusiness,
                 loading,
                 fetchBusinesses,
+                fetchArchivedBusinesses,
                 createBusiness,
                 updateBusiness,
-                deleteBusiness,
+                archiveBusiness,
+                unarchiveBusiness,
             }}
         >
             {children}

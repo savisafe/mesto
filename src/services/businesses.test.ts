@@ -17,10 +17,14 @@ import { getCurrentUser } from '@/lib/auth';
 import { toPublicUser, type PublicUser, type UserRole } from '@/db/schema';
 import {
     listBusinesses,
+    listArchivedBusinesses,
     getBusiness,
     createBusiness,
     updateBusiness,
-    deleteBusiness,
+    archiveBusiness,
+    unarchiveBusiness,
+    purgeExpiredArchives,
+    ARCHIVE_RETENTION_DAYS,
 } from './businesses';
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
@@ -249,7 +253,7 @@ describe('updateBusiness', () => {
     });
 });
 
-describe('deleteBusiness', () => {
+describe('archiveBusiness', () => {
     it('FORBIDDEN если юзер не owner', async () => {
         const owner = await makeUser({ email: 'owner@test.local' });
         const other = await makeUser({ email: 'other@test.local' });
@@ -259,13 +263,13 @@ describe('deleteBusiness', () => {
             .returning();
 
         await loginAs(other);
-        const result = await deleteBusiness(biz.id);
+        const result = await archiveBusiness(biz.id);
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.code).toBe('FORBIDDEN');
     });
 
-    it('owner удаляет, бизнес исчезает', async () => {
+    it('owner архивирует, бизнес исчезает из listBusinesses но остаётся в БД', async () => {
         const owner = await makeUser({ email: 'owner@test.local' });
         const [biz] = await db
             .insert(schema.businesses)
@@ -273,13 +277,136 @@ describe('deleteBusiness', () => {
             .returning();
 
         await loginAs(owner);
-        const result = await deleteBusiness(biz.id);
+        const result = await archiveBusiness(biz.id);
         expect(result.ok).toBe(true);
 
-        const remaining = await db
+        const list = await listBusinesses();
+        if (!list.ok) throw new Error('list failed');
+        expect(list.data).toHaveLength(0);
+
+        const archived = await listArchivedBusinesses();
+        if (!archived.ok) throw new Error('archived list failed');
+        expect(archived.data).toHaveLength(1);
+        expect(archived.data[0].archivedAt).toBeInstanceOf(Date);
+
+        // Строка всё ещё в БД
+        const stillThere = await db
             .select()
             .from(schema.businesses)
             .where(eq(schema.businesses.id, biz.id));
-        expect(remaining).toHaveLength(0);
+        expect(stillThere).toHaveLength(1);
+    });
+
+    it('идемпотентно — повторный архив не падает', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id })
+            .returning();
+
+        await loginAs(owner);
+        await archiveBusiness(biz.id);
+        const second = await archiveBusiness(biz.id);
+        expect(second.ok).toBe(true);
+    });
+
+    it('updateBusiness на архивированный — ARCHIVED', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id, archivedAt: new Date() })
+            .returning();
+
+        await loginAs(owner);
+        const result = await updateBusiness(biz.id, { name: 'New' });
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.code).toBe('ARCHIVED');
+    });
+});
+
+describe('unarchiveBusiness', () => {
+    it('возвращает бизнес из архива в основной список', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id, archivedAt: new Date() })
+            .returning();
+
+        await loginAs(owner);
+        const result = await unarchiveBusiness(biz.id);
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.archivedAt).toBeNull();
+
+        const list = await listBusinesses();
+        if (!list.ok) throw new Error('list failed');
+        expect(list.data).toHaveLength(1);
+    });
+
+    it('FORBIDDEN для не-owner', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const other = await makeUser({ email: 'other@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id, archivedAt: new Date() })
+            .returning();
+
+        await loginAs(other);
+        const result = await unarchiveBusiness(biz.id);
+        expect(result.ok).toBe(false);
+    });
+});
+
+describe('purgeExpiredArchives', () => {
+    it('удаляет только бизнесы старше retention', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const longAgo = new Date(Date.now() - (ARCHIVE_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        const [old] = await db
+            .insert(schema.businesses)
+            .values({ name: 'Old', ownerId: owner.id, archivedAt: longAgo })
+            .returning();
+        const [recent] = await db
+            .insert(schema.businesses)
+            .values({ name: 'Recent', ownerId: owner.id, archivedAt: yesterday })
+            .returning();
+        await db
+            .insert(schema.businesses)
+            .values({ name: 'Alive', ownerId: owner.id });
+
+        const result = await purgeExpiredArchives();
+        expect(result.purged).toBe(1);
+
+        const remaining = await db.select().from(schema.businesses);
+        expect(remaining.map((b) => b.id).sort()).toEqual([recent.id, /* alive */].concat(
+            remaining.filter((b) => b.id !== recent.id && b.id !== old.id).map((b) => b.id),
+        ).sort());
+        // Старого нет, недавний и активный остались
+        expect(remaining.find((b) => b.id === old.id)).toBeUndefined();
+        expect(remaining).toHaveLength(2);
+    });
+
+    it('каскадно удаляет связанные сущности (клиенты, услуги, инвайты)', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const longAgo = new Date(Date.now() - (ARCHIVE_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000);
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'Old', ownerId: owner.id, archivedAt: longAgo })
+            .returning();
+        await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'Client', phone: '+1' });
+        await db
+            .insert(schema.services)
+            .values({ businessId: biz.id, name: 'Service', durationMinutes: 60 });
+
+        await purgeExpiredArchives();
+
+        const clientsLeft = await db.select().from(schema.clients);
+        const servicesLeft = await db.select().from(schema.services);
+        expect(clientsLeft).toHaveLength(0);
+        expect(servicesLeft).toHaveLength(0);
     });
 });

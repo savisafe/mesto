@@ -49,13 +49,18 @@ export function Modal({
     closeOnBackdrop = true,
 }: ModalProps) {
     const dialogRef = useRef<HTMLDivElement>(null);
-    const wasOpenRef = useRef(false);
+
+    // Держим свежую ссылку на onClose, чтобы эффект ниже зависел только от `open`.
+    // Иначе инлайновый onClose из родителя меняет идентичность на каждый рендер,
+    // эффект перезапускается на каждое нажатие клавиши и крадёт фокус у поля ввода.
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
 
     useEffect(() => {
         if (!open) return;
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') onCloseRef.current();
         };
         document.addEventListener('keydown', onKey);
 
@@ -64,15 +69,17 @@ export function Modal({
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
 
-        // Фокус в модалку — для Tab/Esc и для VoiceOver.
-        dialogRef.current?.focus();
-        wasOpenRef.current = true;
+        // Фокус в модалку — для Tab/Esc и для VoiceOver. Но не перехватываем фокус,
+        // если он уже внутри (например, поле с autoFocus уже его получило).
+        if (dialogRef.current && !dialogRef.current.contains(document.activeElement)) {
+            dialogRef.current.focus();
+        }
 
         return () => {
             document.removeEventListener('keydown', onKey);
             document.body.style.overflow = prevOverflow;
         };
-    }, [open, onClose]);
+    }, [open]);
 
     if (typeof window === 'undefined') return null;
 
