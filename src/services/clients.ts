@@ -181,21 +181,3 @@ export async function updateClient(
         .returning();
     return { ok: true, data: client };
 }
-
-export async function deleteClient(id: string): Promise<ServiceResult<{ id: string }>> {
-    const user = await getCurrentUser();
-    if (!user) return UNAUTHORIZED;
-
-    const [existing] = await db
-        .select({ businessId: clients.businessId })
-        .from(clients)
-        .where(eq(clients.id, id))
-        .limit(1);
-    if (!existing) return NOT_FOUND;
-
-    const hasAccess = await checkBusinessAccess(existing.businessId, user.id);
-    if (!hasAccess) return FORBIDDEN;
-
-    await db.delete(clients).where(eq(clients.id, id));
-    return { ok: true, data: { id } };
-}

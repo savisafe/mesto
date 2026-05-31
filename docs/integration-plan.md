@@ -58,13 +58,13 @@
 
 ## Bot · Фаза D — потребление API (параллельно после C8)
 
-- [ ] **D1.** `src/modules/skills/mesto-client.service.ts` (Bearer per-bot, ретраи только 5xx/сеть)
-- [ ] **D2.** Блок `crm` в `configuration.json` + типы в `bot-configuration` + `.env.example`
-- [ ] **D3.** Реализовать `check-availability.skill.ts` (в конфиге объявлен — заглушка)
-- [ ] **D4.** Стабильные `id` в `data/services.json` → `service_external_id`
+- [x] **D1.** `src/modules/skills/mesto-client.service.ts` (Bearer per-bot из `crm.apiKeyEnv`, методы availability/booking/patch/cancel/list/clients, ретраи только 5xx/сеть). Зарегистрирован в `SkillsModule`.
+- [x] **D2.** Блок `crm` (provider/baseUrl/apiKeyEnv): zod-схема v2 + `ResolvedCrm` + адаптер + блок в `daria-mokko/configuration.json` + `.env.example`.
+- [x] **D3.** `check-availability.skill.ts` — резолв услуги из каталога (id+name) + резолв даты (сегодня/завтра/день недели/ДД.ММ/«ДД месяц» или окно 7 дней) → `getAvailability` → дни+времена для LLM. Зарегистрирован, сборка зелёная.
+- [x] **D4.** Стабильные `id` в `data/services.json` уже есть (`correction`, `lamination`…) — навык шлёт их как `service_external_id`. Осталось операционно: проставить совпадающие `external_id` у услуг в Mesto.
 - [ ] **D5.** Переписать FSM записи: услуга/мастер → `check_availability` → выбор реального слота → `starts_at`. Новый тип шага «выбор из динамических опций»
 - [ ] **D6.** `book-slot.skill.ts`: синхронный `POST /bookings`, разбор 201/422/409/5xx; локальный `Booking` — аудит + sync-state
-- [ ] **D7.** Колонки `mestoAppointmentId`, `mestoClientId`, `syncStatus`, `syncedAt` в `prisma/schema.prisma`
+- [x] **D7.** Колонки `mestoAppointmentId`, `mestoClientId`, `syncStatus`, `syncedAt` в `prisma/schema.prisma` (нужна `prisma migrate` когда поднимут Postgres бота; `generate` сделан).
 - [ ] **D8.** Реальные потоки отмены/переноса → `cancel`/`PATCH`
 
 **Готово, когда:** против mock бот проводит запись end-to-end, на закрытую дату переспрашивает, умеет отменить.

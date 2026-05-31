@@ -13,7 +13,6 @@ import {
     listClientsAction,
     createClientAction,
     updateClientAction,
-    deleteClientAction,
 } from '@/actions/clients';
 import type { Client } from '@/db/schema';
 
@@ -91,16 +90,6 @@ export default function ClientsPage() {
             }
         } finally {
             setSubmitting(false);
-        }
-    };
-
-    const handleDelete = async (id: string) => {
-        const result = await deleteClientAction(id);
-        if (result.ok) {
-            alert('success', 'Клиент удалён');
-            fetchClients();
-        } else {
-            alert('error', result.error);
         }
     };
 
@@ -207,12 +196,6 @@ export default function ClientsPage() {
                                                     className="px-3 py-1 text-sm bg-yellow-600 hover:bg-yellow-500 rounded text-white cursor-pointer"
                                                 >
                                                     {client.isBlacklisted ? 'Разблокировать' : 'В ЧС'}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(client.id)}
-                                                    className="px-3 py-1 text-sm bg-red-600 hover:bg-red-500 rounded text-white cursor-pointer"
-                                                >
-                                                    Удалить
                                                 </button>
                                             </div>
                                         </td>

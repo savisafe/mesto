@@ -15,7 +15,7 @@ import * as schema from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth';
 import { toPublicUser, type PublicUser, type UserRole } from '@/db/schema';
-import { listClients, createClient, updateClient, deleteClient } from './clients';
+import { listClients, createClient, updateClient } from './clients';
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
 
@@ -249,38 +249,8 @@ describe('updateClient', () => {
     });
 });
 
-describe('deleteClient', () => {
-    it('FORBIDDEN если без доступа', async () => {
-        const owner = await makeUser('o@test.local');
-        const other = await makeUser('x@test.local');
-        const biz = await makeBusiness(owner.id);
-        const [c] = await db
-            .insert(schema.clients)
-            .values({ businessId: biz.id, name: 'A', phone: '+1' })
-            .returning();
-
-        await loginAs(other);
-        const result = await deleteClient(c.id);
-        expect(result.ok).toBe(false);
-    });
-
-    it('owner удаляет', async () => {
-        const owner = await makeUser('o@test.local');
-        const biz = await makeBusiness(owner.id);
-        const [c] = await db
-            .insert(schema.clients)
-            .values({ businessId: biz.id, name: 'A', phone: '+1' })
-            .returning();
-
-        await loginAs(owner);
-        const result = await deleteClient(c.id);
-        expect(result.ok).toBe(true);
-
-        const remaining = await db.select().from(schema.clients).where(eq(schema.clients.id, c.id));
-        expect(remaining).toHaveLength(0);
-    });
-
-    it('каскадно удаляется при удалении бизнеса', async () => {
+describe('каскадное удаление клиентов при удалении бизнеса', () => {
+    it('клиенты удаляются вместе с бизнесом', async () => {
         const owner = await makeUser('o@test.local');
         const biz = await makeBusiness(owner.id);
         await db

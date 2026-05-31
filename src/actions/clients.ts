@@ -5,7 +5,6 @@ import {
     listClients,
     createClient,
     updateClient,
-    deleteClient,
     type ListClientsInput,
     type ListClientsResult,
     type CreateClientInput,
@@ -35,12 +34,6 @@ export async function updateClientAction(
     input: UpdateClientInput,
 ): Promise<ActionResult<Client>> {
     const result = await updateClient(id, input);
-    if (result.ok) revalidatePath('/clients');
-    return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
-}
-
-export async function deleteClientAction(id: string): Promise<ActionResult<{ id: string }>> {
-    const result = await deleteClient(id);
     if (result.ok) revalidatePath('/clients');
     return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
 }
