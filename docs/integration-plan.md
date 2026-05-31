@@ -4,6 +4,8 @@
 [bot-integration.md](api/bot-integration.md). Сторона бота:
 `mesto-bot/docs/MESTO_INTEGRATION.md`.
 
+**Как связать и запустить (пошагово):** `mesto-bot/docs/CONNECTING_TO_MESTO.md`.
+
 **Последовательность.** Веб A→B→C идёт первым; шаг **C8** (mock + dev-ключ)
 разблокирует команду бота. Фаза **D** (бот) пишется параллельно после заморозки
 контракта и появления mock. **E** — позже.
@@ -62,10 +64,12 @@
 - [x] **D2.** Блок `crm` (provider/baseUrl/apiKeyEnv): zod-схема v2 + `ResolvedCrm` + адаптер + блок в `daria-mokko/configuration.json` + `.env.example`.
 - [x] **D3.** `check-availability.skill.ts` — резолв услуги из каталога (id+name) + резолв даты (сегодня/завтра/день недели/ДД.ММ/«ДД месяц» или окно 7 дней) → `getAvailability` → дни+времена для LLM. Зарегистрирован, сборка зелёная.
 - [x] **D4.** Стабильные `id` в `data/services.json` уже есть (`correction`, `lamination`…) — навык шлёт их как `service_external_id`. Осталось операционно: проставить совпадающие `external_id` у услуг в Mesto.
-- [ ] **D5.** Переписать FSM записи: услуга/мастер → `check_availability` → выбор реального слота → `starts_at`. Новый тип шага «выбор из динамических опций»
-- [ ] **D6.** `book-slot.skill.ts`: синхронный `POST /bookings`, разбор 201/422/409/5xx; локальный `Booking` — аудит + sync-state
+- [x] **D5/D6 (вариант C — без переделки движка).** `book-slot.skill.ts` на подтверждении: локальный `Booking` (id → idempotency_key) → резолв реального слота через `getAvailability` (`datetime.util`: дата + время → `starts_at`) → синхронный `POST /bookings`. Разбор: 201/200 → `synced` (+`mestoAppointmentId`); 422/409 → `ok:false` (FSM покажет errorReply «недоступно»); 5xx/сеть → fail-open (запись локально + алерт студии). CRM не настроена → прежнее поведение. Сборка зелёная.
+  - Отложено (вариант A, если захотим строгое меню слотов в FSM): новый тип шага «выбор из динамических опций» + цикл переспроса на 409.
 - [x] **D7.** Колонки `mestoAppointmentId`, `mestoClientId`, `syncStatus`, `syncedAt` в `prisma/schema.prisma` (нужна `prisma migrate` когда поднимут Postgres бота; `generate` сделан).
-- [ ] **D8.** Реальные потоки отмены/переноса → `cancel`/`PATCH`
+- [x] **D8.** Навыки `cancel_booking` / `reschedule_booking` (LLM-callable). `BookingSyncService` (`findOpenSlot` + `findClientAppointment` по диалогу/телефону/`listBookings`) — общий для book_slot/cancel/reschedule. Добавлены в `skills[]` конфига. Сборка зелёная.
+
+**Phase D готова (сборка бота `tsc` зелёная).** Осталось эксплуатационно: `prisma migrate` на БД бота (sync-колонки) + runtime-прогон полного бота (Telegram → запись в Mesto) с реальным ключом и LLM.
 
 **Готово, когда:** против mock бот проводит запись end-to-end, на закрытую дату переспрашивает, умеет отменить.
 

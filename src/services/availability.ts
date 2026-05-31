@@ -89,7 +89,7 @@ function overlapsAny(intervals: Interval[], s: Date, e: Date): boolean {
  * бизнеса (в т.ч. отсутствие окна в этот день = не работает). Иначе берётся
  * график бизнеса по умолчанию (`employeeUserId = null`).
  */
-function windowsFor(
+export function windowsFor(
     rows: ScheduleRow[],
     employeeUserId: string | null,
     weekday: number,

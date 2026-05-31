@@ -16,10 +16,11 @@ import { useAccess } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import {
-    listAppointmentsAction,
     createAppointmentAction,
     cancelAppointmentAction,
+    completeAppointmentAction,
 } from '@/actions/appointments';
+import { getCalendarDayAction } from '@/actions/calendar';
 import {
     listServicesAction,
     createServiceAction,
@@ -27,11 +28,18 @@ import {
 } from '@/actions/services';
 import { listClientsAction } from '@/actions/clients';
 import { listMembersAction } from '@/actions/employees';
-import type { Service, Client } from '@/db/schema';
+import type { Service, Client, AppointmentStatus } from '@/db/schema';
 import type { AppointmentDetail } from '@/services/appointments';
+import type { CalendarDayData } from '@/services/calendar';
 import type { Member } from '@/services/employees';
+import CalendarDayGrid from './CalendarDayGrid';
 
 const EMPLOYEE_ANY = '__any__';
+
+interface CreatePrefill {
+    employeeId: string | null;
+    startsAt: Date;
+}
 
 export default function CalendarPage() {
     const access = useAccess();
@@ -39,8 +47,7 @@ export default function CalendarPage() {
     const alert = useNotification();
 
     const [date, setDate] = useState(() => toLocalDateString(new Date()));
-    const [employeeFilter, setEmployeeFilter] = useState<string>('all');
-    const [appointments, setAppointments] = useState<AppointmentDetail[]>([]);
+    const [calendar, setCalendar] = useState<CalendarDayData | null>(null);
     const [loading, setLoading] = useState(false);
 
     const [services, setServices] = useState<Service[]>([]);
@@ -48,7 +55,9 @@ export default function CalendarPage() {
     const [members, setMembers] = useState<Member[]>([]);
 
     const [createOpen, setCreateOpen] = useState(false);
+    const [createPrefill, setCreatePrefill] = useState<CreatePrefill | null>(null);
     const [servicesOpen, setServicesOpen] = useState(false);
+    const [selectedAppt, setSelectedAppt] = useState<AppointmentDetail | null>(null);
 
     const fetchReferences = useCallback(async () => {
         if (!currentBusiness) return;
@@ -62,42 +71,48 @@ export default function CalendarPage() {
         if (mem.ok) setMembers(mem.data.members);
     }, [currentBusiness]);
 
-    const fetchAppointments = useCallback(async () => {
+    const fetchCalendar = useCallback(async () => {
         if (!currentBusiness) return;
-        const { from, to } = dayWindow(date);
         setLoading(true);
         try {
-            const result = await listAppointmentsAction({
-                businessId: currentBusiness,
-                from,
-                to,
-                employeeUserId:
-                    employeeFilter === 'all'
-                        ? undefined
-                        : employeeFilter === EMPLOYEE_ANY
-                          ? null
-                          : employeeFilter,
-            });
-            if (result.ok) setAppointments(result.data);
+            const result = await getCalendarDayAction(currentBusiness, date);
+            if (result.ok) setCalendar(result.data);
             else alert('error', result.error);
         } finally {
             setLoading(false);
         }
-    }, [currentBusiness, date, employeeFilter, alert]);
+    }, [currentBusiness, date, alert]);
 
     useEffect(() => {
         fetchReferences();
     }, [fetchReferences]);
 
     useEffect(() => {
-        fetchAppointments();
-    }, [fetchAppointments]);
+        fetchCalendar();
+    }, [fetchCalendar]);
+
+    const openCreate = (prefill: CreatePrefill | null) => {
+        setCreatePrefill(prefill);
+        setCreateOpen(true);
+    };
 
     const handleCancel = async (id: string) => {
         const r = await cancelAppointmentAction(id);
         if (r.ok) {
             alert('success', 'Запись отменена');
-            fetchAppointments();
+            setSelectedAppt(null);
+            fetchCalendar();
+        } else {
+            alert('error', r.error);
+        }
+    };
+
+    const handleComplete = async (id: string) => {
+        const r = await completeAppointmentAction(id);
+        if (r.ok) {
+            alert('success', 'Запись завершена');
+            setSelectedAppt(null);
+            fetchCalendar();
         } else {
             alert('error', r.error);
         }
@@ -125,8 +140,8 @@ export default function CalendarPage() {
 
     return (
         <LayoutPage>
-            <div className="max-w-6xl mx-auto">
-                <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div className="max-w-[1400px] mx-auto">
+                <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div>
                         <p className="text-purple-300 text-sm mb-1">Расписание</p>
                         <h1 className="text-4xl font-bold text-white tracking-tight">
@@ -141,56 +156,66 @@ export default function CalendarPage() {
                             Услуги ({services.length})
                         </button>
                         <div className="w-48">
-                            <Button onClick={() => setCreateOpen(true)}>Новая запись</Button>
+                            <Button onClick={() => openCreate(null)}>Новая запись</Button>
                         </div>
                     </div>
                 </header>
 
-                <DateNav date={date} onChange={setDate} />
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <DateNav date={date} onChange={setDate} />
+                    <Legend />
+                </div>
 
-                <EmployeeFilter
-                    members={members}
-                    value={employeeFilter}
-                    onChange={setEmployeeFilter}
-                />
+                {(services.length === 0 || clients.length === 0) && (
+                    <OnboardingHint services={services} />
+                )}
 
-                <section className="mt-6">
-                    {loading ? (
+                <section>
+                    {loading && !calendar ? (
                         <div className="flex justify-center py-16">
                             <Spinner />
                         </div>
-                    ) : appointments.length === 0 ? (
-                        <EmptyState
-                            services={services}
-                            clients={clients}
-                            onCreate={() => setCreateOpen(true)}
-                        />
-                    ) : (
-                        <div className="space-y-3">
-                            {appointments.map((apt) => (
-                                <AppointmentRow
-                                    key={apt.id}
-                                    apt={apt}
-                                    onCancel={() => handleCancel(apt.id)}
-                                />
-                            ))}
+                    ) : calendar ? (
+                        <div className={loading ? 'opacity-60 transition' : 'transition'}>
+                            <CalendarDayGrid
+                                data={calendar}
+                                onSlotClick={(employeeId, startsAt) =>
+                                    openCreate({ employeeId, startsAt })
+                                }
+                                onApptClick={setSelectedAppt}
+                            />
                         </div>
-                    )}
+                    ) : null}
                 </section>
 
-                <CreateAppointmentDialog
-                    open={createOpen}
-                    businessId={currentBusiness}
-                    date={date}
-                    services={services}
-                    clients={clients}
-                    members={members}
-                    onClose={() => setCreateOpen(false)}
-                    onCreated={() => {
-                        setCreateOpen(false);
-                        fetchAppointments();
-                    }}
-                />
+                {calendar && (
+                    <CreateAppointmentDialog
+                        open={createOpen}
+                        businessId={currentBusiness}
+                        date={date}
+                        dayStart={calendar.dayStart}
+                        timezone={calendar.timezone}
+                        services={services}
+                        clients={clients}
+                        members={members}
+                        prefill={createPrefill}
+                        onClose={() => setCreateOpen(false)}
+                        onCreated={() => {
+                            setCreateOpen(false);
+                            fetchCalendar();
+                        }}
+                    />
+                )}
+
+                {selectedAppt && calendar && (
+                    <AppointmentDetailModal
+                        apt={selectedAppt}
+                        timezone={calendar.timezone}
+                        onClose={() => setSelectedAppt(null)}
+                        onCancel={() => handleCancel(selectedAppt.id)}
+                        onComplete={() => handleComplete(selectedAppt.id)}
+                    />
+                )}
 
                 <ServicesDialog
                     open={servicesOpen}
@@ -212,7 +237,7 @@ function DateNav({ date, onChange }: { date: string; onChange: (d: string) => vo
     };
 
     return (
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2">
             <button
                 onClick={() => shift(-1)}
                 className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-purple-200 cursor-pointer"
@@ -243,143 +268,144 @@ function DateNav({ date, onChange }: { date: string; onChange: (d: string) => vo
     );
 }
 
-function EmployeeFilter({
-    members,
-    value,
-    onChange,
-}: {
-    members: Member[];
-    value: string;
-    onChange: (v: string) => void;
-}) {
-    const options: { value: string; label: string }[] = [
-        { value: 'all', label: 'Все' },
-        { value: EMPLOYEE_ANY, label: 'Без сотрудника' },
-        ...members.map((m) => ({ value: m.id, label: m.name })),
+function Legend() {
+    const items: { label: string; className: string }[] = [
+        { label: 'Запись', className: 'bg-indigo-500/85' },
+        { label: 'Завершена', className: 'bg-emerald-600/80' },
+        { label: 'Отменена', className: 'bg-white/10' },
+        { label: 'Блок', className: 'bg-rose-500/40' },
     ];
     return (
-        <div className="flex flex-wrap gap-2">
-            {options.map((opt) => (
-                <button
-                    key={opt.value}
-                    onClick={() => onChange(opt.value)}
-                    className={`px-3 py-1.5 rounded-full text-sm transition cursor-pointer ${
-                        value === opt.value
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-white/5 text-purple-300 hover:bg-white/10'
-                    }`}
-                >
-                    {opt.label}
-                </button>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-purple-300">
+            {items.map((it) => (
+                <span key={it.label} className="flex items-center gap-1.5">
+                    <span className={`w-3 h-3 rounded-sm ${it.className}`} />
+                    {it.label}
+                </span>
             ))}
+            <span className="flex items-center gap-1.5">
+                <span className="w-3 h-0.5 bg-red-500" />
+                Сейчас
+            </span>
         </div>
     );
 }
 
-function AppointmentRow({
-    apt,
-    onCancel,
-}: {
-    apt: AppointmentDetail;
-    onCancel: () => void;
-}) {
-    const isCancelled = apt.status === 'cancelled';
+function OnboardingHint({ services }: { services: Service[] }) {
     return (
-        <article
-            className={`bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 flex items-start justify-between gap-4 ${
-                isCancelled ? 'opacity-50' : ''
-            }`}
-        >
-            <div className="flex-1">
-                <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-2xl font-semibold text-white tabular-nums">
-                        {formatTime(apt.startsAt)}
-                    </span>
-                    <span className="text-purple-400 text-sm">
-                        {formatTime(apt.startsAt)} — {formatTime(apt.endsAt)}
-                    </span>
-                    {isCancelled && (
-                        <span className="text-xs text-red-300 px-2 py-0.5 rounded-full border border-red-500/30">
-                            отменена
-                        </span>
-                    )}
-                </div>
-                <p className="text-white">
-                    {apt.service?.name ?? 'Без услуги'}
-                    {apt.amount > 0 && (
-                        <span className="text-purple-300 ml-2 text-sm">
-                            · {formatMoney(apt.amount, apt.currency)}
-                        </span>
-                    )}
-                </p>
-                <p className="text-purple-300 text-sm mt-1">
-                    {apt.client.name} · {apt.client.phone}
-                    {apt.employee && (
-                        <>
-                            <span className="mx-2">·</span>
-                            {apt.employee.name}
-                        </>
-                    )}
-                </p>
-                {apt.notes && (
-                    <p className="text-purple-400 text-xs mt-2">{apt.notes}</p>
-                )}
-            </div>
-            {!isCancelled && (
-                <button
-                    onClick={onCancel}
-                    className="text-sm text-red-400 hover:text-red-300 cursor-pointer whitespace-nowrap"
-                >
-                    Отменить
-                </button>
-            )}
-        </article>
-    );
-}
-
-function EmptyState({
-    services,
-    clients,
-    onCreate,
-}: {
-    services: Service[];
-    clients: Client[];
-    onCreate: () => void;
-}) {
-    if (services.length === 0) {
-        return (
-            <div className="bg-white/5 border border-purple-700/40 rounded-2xl p-8 text-center">
-                <p className="text-white mb-2">Сначала добавьте услуги</p>
-                <p className="text-purple-300 text-sm">
-                    Нажмите «Услуги» наверху и добавьте хотя бы одну.
-                </p>
-            </div>
-        );
-    }
-    if (clients.length === 0) {
-        return (
-            <div className="bg-white/5 border border-purple-700/40 rounded-2xl p-8 text-center">
-                <p className="text-white mb-2">Сначала добавьте клиентов</p>
-                <p className="text-purple-300 text-sm">
-                    Перейдите в{' '}
+        <div className="mb-4 bg-white/5 border border-purple-700/40 rounded-xl px-4 py-3 text-sm text-purple-200">
+            {services.length === 0 ? (
+                <>Чтобы создавать записи, добавьте услуги — кнопка «Услуги» наверху.</>
+            ) : (
+                <>
+                    Добавьте клиентов в разделе{' '}
                     <a href="/clients" className="underline hover:text-white">
                         «Клиенты»
                     </a>
-                    {' '}и добавьте хотя бы одного.
-                </p>
-            </div>
-        );
-    }
-    return (
-        <div className="bg-white/5 border border-purple-700/40 rounded-2xl p-8 text-center">
-            <p className="text-white mb-3">На этот день записей нет</p>
-            <button
-                onClick={onCreate}
-                className="text-purple-300 hover:text-white underline cursor-pointer"
-            >
-                Создать первую
-            </button>
+                    , чтобы создавать записи.
+                </>
+            )}
         </div>
+    );
+}
+
+function AppointmentDetailModal({
+    apt,
+    timezone,
+    onClose,
+    onCancel,
+    onComplete,
+}: {
+    apt: AppointmentDetail;
+    timezone: string;
+    onClose: () => void;
+    onCancel: () => void;
+    onComplete: () => void;
+}) {
+    const [busy, setBusy] = useState(false);
+    const active = apt.status === 'scheduled';
+
+    const run = async (fn: () => void) => {
+        setBusy(true);
+        try {
+            await fn();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Modal
+            open
+            onClose={onClose}
+            title={apt.client.name}
+            footer={
+                <>
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2.5 text-purple-200 hover:text-white text-sm cursor-pointer"
+                    >
+                        Закрыть
+                    </button>
+                    {active && (
+                        <>
+                            <button
+                                onClick={() => run(onComplete)}
+                                disabled={busy}
+                                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-xl text-white text-sm font-medium cursor-pointer transition"
+                            >
+                                Завершить
+                            </button>
+                            <button
+                                onClick={() => run(onCancel)}
+                                disabled={busy}
+                                className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 rounded-xl text-white text-sm font-medium cursor-pointer transition"
+                            >
+                                Отменить
+                            </button>
+                        </>
+                    )}
+                </>
+            }
+        >
+            <dl className="space-y-3 text-sm">
+                <Row label="Время">
+                    {fmtTime(apt.startsAt, timezone)} — {fmtTime(apt.endsAt, timezone)}
+                </Row>
+                <Row label="Статус">
+                    <StatusBadge status={apt.status} />
+                </Row>
+                <Row label="Услуга">{apt.service?.name ?? 'Без услуги'}</Row>
+                <Row label="Клиент">
+                    {apt.client.name} · {apt.client.phone}
+                </Row>
+                <Row label="Сотрудник">{apt.employee?.name ?? 'Не назначен'}</Row>
+                {apt.amount > 0 && <Row label="Цена">{formatMoney(apt.amount, apt.currency)}</Row>}
+                {apt.notes && <Row label="Заметка">{apt.notes}</Row>}
+            </dl>
+        </Modal>
+    );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="flex gap-3">
+            <dt className="w-24 shrink-0 text-purple-400">{label}</dt>
+            <dd className="text-white">{children}</dd>
+        </div>
+    );
+}
+
+function StatusBadge({ status }: { status: AppointmentStatus }) {
+    const map: Record<AppointmentStatus, { label: string; className: string }> = {
+        scheduled: { label: 'Запланирована', className: 'text-indigo-200 border-indigo-400/40' },
+        completed: { label: 'Завершена', className: 'text-emerald-200 border-emerald-400/40' },
+        cancelled: { label: 'Отменена', className: 'text-rose-200 border-rose-400/40' },
+        no_show: { label: 'Не пришёл', className: 'text-amber-200 border-amber-400/40' },
+    };
+    const s = map[status];
+    return (
+        <span className={`text-xs px-2 py-0.5 rounded-full border ${s.className}`}>{s.label}</span>
     );
 }
 
@@ -387,18 +413,24 @@ function CreateAppointmentDialog({
     open,
     businessId,
     date,
+    dayStart,
+    timezone,
     services,
     clients,
     members,
+    prefill,
     onClose,
     onCreated,
 }: {
     open: boolean;
     businessId: string;
     date: string;
+    dayStart: Date;
+    timezone: string;
     services: Service[];
     clients: Client[];
     members: Member[];
+    prefill: CreatePrefill | null;
     onClose: () => void;
     onCreated: () => void;
 }) {
@@ -410,16 +442,14 @@ function CreateAppointmentDialog({
     const [notes, setNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    // Сбрасываем форму на «дефолт первого элемента» каждый раз когда модалку
-    // открывают: иначе useState инициализируется на первом монтировании
-    // (когда services/clients ещё пустые, потому что fetchReferences не успел)
-    // → селекты визуально показывают первый option, но state остаётся ''.
+    // Сбрасываем форму при каждом открытии: значения по умолчанию или из prefill
+    // (клик по слоту в сетке — подставляет сотрудника и время этого слота).
     useEffect(() => {
         if (!open) return;
         setServiceId(services[0]?.id ?? '');
         setClientId(clients[0]?.id ?? '');
-        setEmployeeId(EMPLOYEE_ANY);
-        setTime('10:00');
+        setEmployeeId(prefill ? (prefill.employeeId ?? EMPLOYEE_ANY) : EMPLOYEE_ANY);
+        setTime(prefill ? fmtHm(prefill.startsAt, timezone) : '10:00');
         setNotes('');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
@@ -436,11 +466,13 @@ function CreateAppointmentDialog({
         }
         if (!selectedService) return;
 
-        const startsAt = new Date(`${date}T${time}:00`);
-        if (isNaN(startsAt.getTime())) {
+        const [h, m] = time.split(':').map(Number);
+        if (!Number.isInteger(h) || !Number.isInteger(m)) {
             alert('error', 'Некорректное время');
             return;
         }
+        // Локальная полночь дня (в зоне бизнеса) + минуты = точный UTC-момент.
+        const startsAt = new Date(new Date(dayStart).getTime() + (h * 60 + m) * 60_000);
 
         setSubmitting(true);
         try {
@@ -487,6 +519,7 @@ function CreateAppointmentDialog({
                 </>
             }
         >
+            <p className="text-purple-300 text-sm mb-4">{formatDateHeader(date)}</p>
             <SelectField
                 label="Услуга"
                 value={serviceId}
@@ -699,13 +732,6 @@ function toLocalDateString(d: Date): string {
     return `${y}-${m}-${day}`;
 }
 
-function dayWindow(date: string): { from: Date; to: Date } {
-    const from = new Date(`${date}T00:00:00`);
-    const to = new Date(from);
-    to.setDate(to.getDate() + 1);
-    return { from, to };
-}
-
 function formatDateHeader(date: string): string {
     const d = new Date(`${date}T00:00:00`);
     return new Intl.DateTimeFormat('ru-RU', {
@@ -715,11 +741,23 @@ function formatDateHeader(date: string): string {
     }).format(d);
 }
 
-function formatTime(d: Date): string {
+/** "HH:MM" (24ч) в зоне бизнеса — для поля времени. */
+function fmtHm(d: Date, tz: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: tz,
+    }).format(new Date(d));
+}
+
+/** "HH:MM" (ru) в зоне бизнеса — для отображения. */
+function fmtTime(d: Date, tz: string): string {
     return new Intl.DateTimeFormat('ru-RU', {
         hour: '2-digit',
         minute: '2-digit',
-    }).format(d);
+        timeZone: tz,
+    }).format(new Date(d));
 }
 
 function formatMoney(amount: number, currency: string): string {
