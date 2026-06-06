@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
 export const businesses = pgTable(
@@ -8,6 +8,11 @@ export const businesses = pgTable(
         name: text('name').notNull(),
         description: text('description'),
         isActive: boolean('is_active').notNull().default(true),
+        // Публичный slug для страницы онлайн-записи `/b/<slug>`. null = страница
+        // ещё не настроена. Уникален среди всех бизнесов.
+        slug: text('slug'),
+        // Включена ли публичная страница онлайн-записи владельцем.
+        publicBookingEnabled: boolean('public_booking_enabled').notNull().default(false),
         // IANA-зона бизнеса. Все «локальные» часы графика и слоты резолвятся в ней.
         timezone: text('timezone').notNull().default('Asia/Almaty'),
         ownerId: uuid('owner_id')
@@ -26,6 +31,8 @@ export const businesses = pgTable(
     (t) => [
         index('businesses_owner_id_idx').on(t.ownerId),
         index('businesses_archived_at_idx').on(t.archivedAt),
+        // Уникальность slug; несколько NULL не конфликтуют (бизнес без страницы).
+        uniqueIndex('businesses_slug_idx').on(t.slug),
     ],
 );
 

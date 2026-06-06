@@ -15,3 +15,6 @@ export const routes = {
     SETTINGS_API: '/settings/api',
     INSTALL: '/install',
 }
+
+// Публичная страница онлайн-записи бизнеса по slug.
+export const publicBusinessPath = (slug: string) => `/b/${slug}`;

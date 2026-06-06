@@ -7,7 +7,8 @@ import { users } from './users';
 export const appointmentStatuses = ['scheduled', 'completed', 'cancelled', 'no_show'] as const;
 export type AppointmentStatus = (typeof appointmentStatuses)[number];
 
-export const appointmentSources = ['manual', 'external'] as const;
+// 'public' — запись с публичной страницы онлайн-записи `/b/<slug>`.
+export const appointmentSources = ['manual', 'external', 'public'] as const;
 export type AppointmentSource = (typeof appointmentSources)[number];
 
 export const appointments = pgTable(
