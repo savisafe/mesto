@@ -5,20 +5,20 @@
  * могли бы утечь другому на общем устройстве. Кэшируем только
  * статические ассеты с контент-хэшем (_next/static, иконки) и
  * отдаём оффлайн-страницу, когда сети нет.
+ *
+ * Версия берётся из query-параметра ?v= при регистрации (build id),
+ * поэтому каждый деплой = новый воркер → браузер замечает обновление.
  */
 
-const VERSION = 'v1';
+const VERSION = new URL(self.location).searchParams.get('v') || 'dev';
 const STATIC_CACHE = `mesto-static-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
-    event.waitUntil(
-        caches
-            .open(STATIC_CACHE)
-            .then((cache) => cache.addAll(PRECACHE))
-            .then(() => self.skipWaiting()),
-    );
+    // Не вызываем skipWaiting здесь: новый воркер ждёт, пока клиент
+    // не подтвердит обновление (тост «Обновить») или не закроются все вкладки.
+    event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)));
 });
 
 self.addEventListener('activate', (event) => {
@@ -34,6 +34,13 @@ self.addEventListener('activate', (event) => {
             )
             .then(() => self.clients.claim()),
     );
+});
+
+// Команда от клиента: применить обновление немедленно.
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });
 
 const isStaticAsset = (url) =>
