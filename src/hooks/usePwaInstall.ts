@@ -14,6 +14,8 @@ interface UsePwaInstallResult {
     isStandalone: boolean;
     /** iOS/iPadOS — установка только вручную через «Поделиться». */
     isIOS: boolean;
+    /** Android-устройство. */
+    isAndroid: boolean;
     promptInstall: () => Promise<void>;
 }
 
@@ -24,6 +26,11 @@ const detectIOS = (): boolean => {
     // iPadOS 13+ маскируется под macOS — ловим по сенсорному экрану.
     const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
     return isIPhone || isIPadOS;
+};
+
+const detectAndroid = (): boolean => {
+    if (typeof navigator === 'undefined') return false;
+    return /android/i.test(navigator.userAgent);
 };
 
 const detectStandalone = (): boolean => {
@@ -39,9 +46,11 @@ export const usePwaInstall = (): UsePwaInstallResult => {
     const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
     const [isStandalone, setIsStandalone] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
+    const [isAndroid, setIsAndroid] = useState(false);
 
     useEffect(() => {
         setIsIOS(detectIOS());
+        setIsAndroid(detectAndroid());
         setIsStandalone(detectStandalone());
 
         const handlePrompt = (event: Event) => {
@@ -80,5 +89,5 @@ export const usePwaInstall = (): UsePwaInstallResult => {
         }
     }, [deferred]);
 
-    return { canPrompt: deferred !== null, isStandalone, isIOS, promptInstall };
+    return { canPrompt: deferred !== null, isStandalone, isIOS, isAndroid, promptInstall };
 };

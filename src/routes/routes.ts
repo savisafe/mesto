@@ -13,4 +13,5 @@ export const routes = {
     SETTINGS: '/settings',
     SCHEDULE: '/schedule',
     SETTINGS_API: '/settings/api',
+    INSTALL: '/install',
 }
