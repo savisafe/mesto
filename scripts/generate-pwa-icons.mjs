@@ -82,48 +82,45 @@ const encodePng = (rgba, size) => {
     ]);
 };
 
-// Геометрия булавки в нормализованных координатах (0..1).
-const HEAD = { x: 0.5, y: 0.4, r: 0.2 };
-const TIP = { x: 0.5, y: 0.88 };
-const HOLE_R = 0.082;
+// Монограмма «M» как восходящий график: ломаная из двух пиков,
+// второй выше первого → ощущение роста (контроль, деньги, аналитика).
+// Координаты нормализованы (0..1), y растёт вниз.
+const M_POINTS = [
+    [0.16, 0.74], // низ слева
+    [0.32, 0.34], // пик 1
+    [0.5, 0.56], // впадина
+    [0.68, 0.27], // пик 2 (выше первого — рост)
+    [0.84, 0.74], // низ справа
+];
+const STROKE = 0.082; // полутолщина штриха
+const NODE = { x: 0.68, y: 0.27, r: 0.052 }; // акцент-узел на вершине роста
+
+// Квадрат расстояния от точки до отрезка.
+const distToSegmentSq = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = ax + t * dx;
+    const cy = ay + t * dy;
+    return (px - cx) ** 2 + (py - cy) ** 2;
+};
 
 const insideCircle = (x, y, c, r) => (x - c.x) ** 2 + (y - c.y) ** 2 <= r * r;
 
-const tangentTriangle = () => {
-    const dx = TIP.x - HEAD.x;
-    const dy = TIP.y - HEAD.y;
-    const d = Math.hypot(dx, dy);
-    const beta = Math.acos(HEAD.r / d);
-    const phi = Math.atan2(dy, dx);
-    const p = (sign) => ({
-        x: HEAD.x + HEAD.r * Math.cos(phi + sign * beta),
-        y: HEAD.y + HEAD.r * Math.sin(phi + sign * beta),
-    });
-    return [TIP, p(1), p(-1)];
-};
-
-const TRI = tangentTriangle();
-
-const sign = (a, b, c) => (a.x - c.x) * (b.y - c.y) - (b.x - c.x) * (a.y - c.y);
-
-const insideTriangle = (x, y, t) => {
-    const p = { x, y };
-    const d1 = sign(p, t[0], t[1]);
-    const d2 = sign(p, t[1], t[2]);
-    const d3 = sign(p, t[2], t[0]);
-    const neg = d1 < 0 || d2 < 0 || d3 < 0;
-    const pos = d1 > 0 || d2 > 0 || d3 > 0;
-    return !(neg && pos);
-};
-
-// Возвращает alpha (0..1) знака булавки в точке с учётом scale/offset для maskable.
-const pinAlpha = (x, y, scale, cy) => {
+// Возвращает alpha (0..1) знака в точке с учётом scale/offset для maskable.
+const markAlpha = (x, y, scale, cy) => {
     const nx = (x - 0.5) / scale + 0.5;
     const ny = (y - cy) / scale + 0.5;
-    const onPin = insideCircle(nx, ny, HEAD, HEAD.r) || insideTriangle(nx, ny, TRI);
-    if (!onPin) return 0;
-    if (insideCircle(nx, ny, HEAD, HOLE_R)) return 0;
-    return 1;
+    const half2 = STROKE * STROKE;
+    for (let i = 0; i < M_POINTS.length - 1; i++) {
+        const [ax, ay] = M_POINTS[i];
+        const [bx, by] = M_POINTS[i + 1];
+        if (distToSegmentSq(nx, ny, ax, ay, bx, by) <= half2) return 1;
+    }
+    if (insideCircle(nx, ny, NODE, NODE.r)) return 1;
+    return 0;
 };
 
 const roundedRectAlpha = (x, y, radius) => {
@@ -137,7 +134,7 @@ const roundedRectAlpha = (x, y, radius) => {
     return dist <= radius ? 1 : 0;
 };
 
-// Мягкая тень от булавки: усредняем знак по диску с офсетом вниз.
+// Мягкая тень от знака: усредняем знак по диску с офсетом вниз.
 const SHADOW_TAPS = (() => {
     const taps = [{ dx: 0, dy: 0 }];
     const rings = [0.012, 0.024];
@@ -158,9 +155,9 @@ const renderIcon = (size, { maskable }) => {
 
     // Параметры композиции.
     const bgRadius = maskable ? 0 : 0.235;
-    const pinScale = maskable ? 0.6 : 0.82; // в maskable знак внутри safe-zone
-    const pinCy = maskable ? 0.46 : 0.47;
-    const shadowOffset = 0.045 * pinScale;
+    const markScale = maskable ? 0.6 : 0.84; // в maskable знак внутри safe-zone
+    const markCy = 0.5;
+    const shadowOffset = 0.04 * markScale;
 
     for (let by = 0; by < big; by++) {
         for (let bx = 0; bx < big; bx++) {
@@ -179,23 +176,23 @@ const renderIcon = (size, { maskable }) => {
                 const hl = Math.max(0, 1 - hd / 0.6) ** 2 * 0.18;
                 r = lerp(r, 255, hl); g = lerp(g, 255, hl); b = lerp(b, 255, hl);
 
-                // Мягкая тень под булавкой.
+                // Мягкая тень под знаком.
                 let sh = 0;
                 for (const tp of SHADOW_TAPS) {
-                    sh += pinAlpha(x - tp.dx, y - tp.dy - shadowOffset, pinScale, pinCy);
+                    sh += markAlpha(x - tp.dx, y - tp.dy - shadowOffset, markScale, markCy);
                 }
                 sh = (sh / SHADOW_TAPS.length) * 0.33;
                 r *= 1 - sh; g *= 1 - sh; b *= 1 - sh;
 
                 a = 255 * bgA;
 
-                // Сама булавка: белая с лёгким вертикальным градиентом.
-                const pinA = pinAlpha(x, y, pinScale, pinCy);
-                if (pinA > 0) {
-                    const shade = lerp(255, 232, Math.min(1, Math.max(0, (y - 0.2) / 0.6)));
-                    r = lerp(r, shade, pinA);
-                    g = lerp(g, shade, pinA);
-                    b = lerp(b, lerp(255, 240, Math.min(1, Math.max(0, (y - 0.2) / 0.6))), pinA);
+                // Сам знак: белый с лёгким вертикальным градиентом.
+                const markA = markAlpha(x, y, markScale, markCy);
+                if (markA > 0) {
+                    const k = Math.min(1, Math.max(0, (y - 0.25) / 0.5));
+                    r = lerp(r, lerp(255, 232, k), markA);
+                    g = lerp(g, lerp(255, 234, k), markA);
+                    b = lerp(b, lerp(255, 244, k), markA);
                 }
             }
             const px = (Math.floor(by / SS) * size + Math.floor(bx / SS)) * 4;
