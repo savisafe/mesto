@@ -34,9 +34,7 @@ export const Logo = ({ size = 36, withWordmark = true, className }: LogoProps) =
             />
         </svg>
         {withWordmark && (
-            <span className="text-2xl font-bold text-white">
-                Mesto<span className="text-purple-400">.pro</span>
-            </span>
+            <span className="text-2xl font-bold text-white">Mesto</span>
         )}
     </span>
 );
