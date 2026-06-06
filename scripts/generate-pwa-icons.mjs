@@ -147,15 +147,15 @@ const SHADOW_TAPS = (() => {
     return taps;
 })();
 
-const renderIcon = (size, { maskable }) => {
+const renderIcon = (size, { maskable = false, favicon = false } = {}) => {
     const SS = 4; // суперсэмплинг для сглаживания
     const big = size * SS;
     const acc = Buffer.alloc(size * size * 4);
     const sums = new Float64Array(size * size * 4);
 
     // Параметры композиции.
-    const bgRadius = maskable ? 0 : 0.235;
-    const markScale = maskable ? 0.6 : 0.84; // в maskable знак внутри safe-zone
+    const bgRadius = maskable ? 0 : favicon ? 0.16 : 0.235;
+    const markScale = maskable ? 0.6 : favicon ? 0.94 : 0.84; // favicon крупнее для читаемости
     const markCy = 0.5;
     const shadowOffset = 0.04 * markScale;
 
@@ -171,18 +171,21 @@ const renderIcon = (size, { maskable }) => {
                 const grad = gradientAt(t);
                 r = grad[0]; g = grad[1]; b = grad[2];
 
-                // Глянцевый блик в верхнем-левом углу.
-                const hd = Math.hypot(x - 0.26, y - 0.22);
-                const hl = Math.max(0, 1 - hd / 0.6) ** 2 * 0.18;
-                r = lerp(r, 255, hl); g = lerp(g, 255, hl); b = lerp(b, 255, hl);
+                // Глянцевый блик и тень опускаем для favicon (мелкий размер).
+                if (!favicon) {
+                    // Глянцевый блик в верхнем-левом углу.
+                    const hd = Math.hypot(x - 0.26, y - 0.22);
+                    const hl = Math.max(0, 1 - hd / 0.6) ** 2 * 0.18;
+                    r = lerp(r, 255, hl); g = lerp(g, 255, hl); b = lerp(b, 255, hl);
 
-                // Мягкая тень под знаком.
-                let sh = 0;
-                for (const tp of SHADOW_TAPS) {
-                    sh += markAlpha(x - tp.dx, y - tp.dy - shadowOffset, markScale, markCy);
+                    // Мягкая тень под знаком.
+                    let sh = 0;
+                    for (const tp of SHADOW_TAPS) {
+                        sh += markAlpha(x - tp.dx, y - tp.dy - shadowOffset, markScale, markCy);
+                    }
+                    sh = (sh / SHADOW_TAPS.length) * 0.33;
+                    r *= 1 - sh; g *= 1 - sh; b *= 1 - sh;
                 }
-                sh = (sh / SHADOW_TAPS.length) * 0.33;
-                r *= 1 - sh; g *= 1 - sh; b *= 1 - sh;
 
                 a = 255 * bgA;
 
@@ -217,6 +220,32 @@ const renderIcon = (size, { maskable }) => {
     return encodePng(acc, size);
 };
 
+// Упаковка нескольких PNG в один .ico (PNG-вариант, понимают все совр. браузеры).
+const packIco = (images) => {
+    const count = images.length;
+    const header = Buffer.alloc(6);
+    header.writeUInt16LE(0, 0); // reserved
+    header.writeUInt16LE(1, 2); // type: icon
+    header.writeUInt16LE(count, 4);
+
+    const dir = Buffer.alloc(count * 16);
+    let offset = 6 + count * 16;
+    for (let i = 0; i < count; i++) {
+        const { size, png } = images[i];
+        const e = i * 16;
+        dir[e] = size >= 256 ? 0 : size; // width
+        dir[e + 1] = size >= 256 ? 0 : size; // height
+        dir[e + 2] = 0; // palette
+        dir[e + 3] = 0; // reserved
+        dir.writeUInt16LE(1, e + 4); // color planes
+        dir.writeUInt16LE(32, e + 6); // bits per pixel
+        dir.writeUInt32LE(png.length, e + 8);
+        dir.writeUInt32LE(offset, e + 12);
+        offset += png.length;
+    }
+    return Buffer.concat([header, dir, ...images.map((im) => im.png)]);
+};
+
 mkdirSync(PUBLIC_DIR, { recursive: true });
 
 const targets = [
@@ -230,6 +259,16 @@ const targets = [
 for (const t of targets) {
     const png = renderIcon(t.size, { maskable: t.maskable });
     writeFileSync(join(PUBLIC_DIR, t.name), png);
-    console.log(`✓ ${t.name} (${png.length} bytes)`);
+    console.log(`✓ icons/${t.name} (${png.length} bytes)`);
 }
-console.log('PWA-иконки сгенерированы в public/icons/');
+
+// favicon.ico с «M» для вкладки браузера (16/32/48 px).
+const APP_DIR = join(__dirname, '..', 'src', 'app');
+const icoSizes = [16, 32, 48];
+const ico = packIco(
+    icoSizes.map((size) => ({ size, png: renderIcon(size, { favicon: true }) })),
+);
+writeFileSync(join(APP_DIR, 'favicon.ico'), ico);
+console.log(`✓ src/app/favicon.ico (${ico.length} bytes)`);
+
+console.log('PWA-иконки и favicon сгенерированы.');
