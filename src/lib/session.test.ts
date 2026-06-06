@@ -23,7 +23,7 @@ import { sha256 } from './crypto';
 async function makeUser(email = 'a@b.c') {
     const [u] = await db
         .insert(schema.users)
-        .values({ email, passwordHash: 'argon2$test', name: 'A' })
+        .values({ email, passwordHash: 'argon2$test', name: 'A', phone: '+70000000000' })
         .returning();
     return u;
 }

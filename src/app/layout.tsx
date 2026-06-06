@@ -37,6 +37,7 @@ export default async function RootLayout({
     children: React.ReactNode;
 }) {
     const user = await getCurrentUser();
+    const isTelegramEnabled = Boolean(process.env.TELEGRAM_BOT_USERNAME);
 
     return (
         <html lang="ru" suppressHydrationWarning>
@@ -46,7 +47,7 @@ export default async function RootLayout({
                     <AuthProvider initialUser={user}>
                         <BusinessProvider>
                             <Header />
-                            <EmailVerifyBanner />
+                            <EmailVerifyBanner isTelegramEnabled={isTelegramEnabled} />
                             {children}
                             <Footer />
                             <Suspense fallback={null}>

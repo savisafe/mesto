@@ -37,6 +37,7 @@ async function makeUser(opts: { email: string; role?: UserRole }): Promise<Publi
             passwordHash: 'argon2$test',
             name: opts.email,
             role: opts.role ?? 'OWNER',
+            phone: '+70000000000',
         })
         .returning();
     return toPublicUser(user);

@@ -24,7 +24,7 @@ const at = (iso: string) => new Date(iso);
 async function makeOwner() {
     const [u] = await db
         .insert(schema.users)
-        .values({ email: `o${Math.random()}@t.local`, passwordHash: 'x', name: 'Owner' })
+        .values({ email: `o${Math.random()}@t.local`, passwordHash: 'x', name: 'Owner', phone: '+70000000000' })
         .returning();
     return u;
 }

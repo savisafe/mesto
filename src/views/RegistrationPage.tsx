@@ -23,7 +23,7 @@ export default function RegistrationPage() {
             alert('error', 'Пароли не совпадают');
             return;
         }
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !phone) {
             alert('error', 'Заполните все обязательные поля');
             return;
         }
@@ -34,7 +34,7 @@ export default function RegistrationPage() {
                 email,
                 password,
                 name,
-                phone: phone || undefined,
+                phone,
             });
             if (!result.ok) alert('error', result.error);
         } catch (err) {
@@ -59,7 +59,7 @@ export default function RegistrationPage() {
             />
             <TextField
                 label="Телефон"
-                hint="Необязательно — пригодится для связи с клиентами"
+                hint="Обязательно — для подтверждения аккаунта и связи с клиентами"
                 type="tel"
                 autoComplete="tel"
                 value={phone}

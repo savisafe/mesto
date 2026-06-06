@@ -22,6 +22,7 @@ import {
     consumeMagicLink,
     verifyEmail,
     resendVerification,
+    confirmTelegram,
 } from './auth';
 import { sha256 } from '@/lib/crypto';
 
@@ -48,6 +49,7 @@ describe('register', () => {
             email: 'Foo@Bar.com',
             password: 'super-secret-pw',
             name: 'Foo',
+            phone: '+79991234567',
         });
 
         expect(result.ok).toBe(true);
@@ -65,7 +67,7 @@ describe('register', () => {
     });
 
     it('инициирует отправку письма верификации', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         // sendEmailVerification вызывается через void → ждём один tick
         await new Promise((r) => setImmediate(r));
         expect(mockSendVerify).toHaveBeenCalledOnce();
@@ -73,38 +75,107 @@ describe('register', () => {
     });
 
     it('отклоняет некорректный email', async () => {
-        const result = await register({ email: 'not-an-email', password: 'goodpass1', name: 'A' });
+        const result = await register({ email: 'not-an-email', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.code).toBe('INVALID_EMAIL');
     });
 
     it('отклоняет короткий пароль', async () => {
-        const result = await register({ email: 'a@b.c', password: 'short', name: 'A' });
+        const result = await register({ email: 'a@b.c', password: 'short', name: 'A', phone: '+79991234567' });
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.code).toBe('WEAK_PASSWORD');
     });
 
     it('отклоняет пустое имя', async () => {
-        const result = await register({ email: 'a@b.c', password: 'goodpass1', name: '   ' });
+        const result = await register({ email: 'a@b.c', password: 'goodpass1', name: '   ', phone: '+79991234567' });
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.code).toBe('INVALID_NAME');
     });
 
     it('отклоняет дубликат email', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
-        const result = await register({ email: 'A@B.C', password: 'goodpass1', name: 'B' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
+        const result = await register({ email: 'A@B.C', password: 'goodpass1', name: 'B', phone: '+79991234567' });
         expect(result.ok).toBe(false);
         if (result.ok) return;
         expect(result.code).toBe('EMAIL_TAKEN');
+    });
+
+    it('отклоняет пустой телефон', async () => {
+        const result = await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '   ' });
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.code).toBe('PHONE_REQUIRED');
+    });
+
+    it('отклоняет некорректный телефон', async () => {
+        const result = await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '123' });
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.code).toBe('INVALID_PHONE');
+    });
+
+    it('нормализует телефон (убирает пробелы и скобки)', async () => {
+        const result = await register({
+            email: 'a@b.c',
+            password: 'goodpass1',
+            name: 'A',
+            phone: '+7 (999) 123-45-67',
+        });
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        const [stored] = await db.select().from(schema.users).limit(1);
+        expect(stored.phone).toBe('+79991234567');
+    });
+});
+
+describe('confirmTelegram', () => {
+    async function setupToken(): Promise<{ userId: string; raw: string }> {
+        const reg = await register({
+            email: 'a@b.c',
+            password: 'goodpass1',
+            name: 'A',
+            phone: '+79991234567',
+        });
+        if (!reg.ok) throw new Error('register failed');
+        const raw = 'tg-raw-token-123';
+        await db.insert(schema.emailTokens).values({
+            userId: reg.data.id,
+            tokenHash: sha256(raw),
+            kind: 'telegram_verify',
+            expiresAt: new Date(Date.now() + 60_000),
+        });
+        return { userId: reg.data.id, raw };
+    }
+
+    it('подтверждает аккаунт и привязывает chat_id', async () => {
+        const { userId, raw } = await setupToken();
+        const result = await confirmTelegram(raw, '555000');
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data.isEmailVerified).toBe(true);
+
+        const [stored] = await db.select().from(schema.users).where(eq(schema.users.id, userId));
+        expect(stored.isEmailVerified).toBe(true);
+        expect(stored.telegramChatId).toBe('555000');
+    });
+
+    it('одноразовый — повторное использование токена отклоняется', async () => {
+        const { raw } = await setupToken();
+        const first = await confirmTelegram(raw, '555000');
+        const second = await confirmTelegram(raw, '555000');
+        expect(first.ok).toBe(true);
+        expect(second.ok).toBe(false);
+        if (second.ok) return;
+        expect(second.code).toBe('INVALID_TOKEN');
     });
 });
 
 describe('login', () => {
     beforeEach(async () => {
-        await register({ email: 'user@test.local', password: 'correctpassword', name: 'U' });
+        await register({ email: 'user@test.local', password: 'correctpassword', name: 'U', phone: '+79991234567' });
     });
 
     it('возвращает пользователя при верном пароле', async () => {
@@ -137,7 +208,7 @@ describe('login', () => {
 
 describe('requestMagicLink', () => {
     it('отправляет письмо если email зарегистрирован', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         mockSendMagic.mockReset();
 
@@ -160,7 +231,7 @@ describe('requestMagicLink', () => {
 
 describe('consumeMagicLink', () => {
     async function setupMagicLink(): Promise<string> {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         mockSendMagic.mockReset();
         await requestMagicLink('a@b.c');
@@ -192,7 +263,7 @@ describe('consumeMagicLink', () => {
     });
 
     it('отклоняет токен другого типа (verify подсунут как magic)', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         const verifyToken = mockSendVerify.mock.calls[0][1];
 
@@ -215,7 +286,7 @@ describe('consumeMagicLink', () => {
 
 describe('verifyEmail', () => {
     it('помечает email как подтверждённый', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         const token = mockSendVerify.mock.calls[0][1];
 
@@ -226,7 +297,7 @@ describe('verifyEmail', () => {
     });
 
     it('одноразовый — повторное использование отклоняется', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         const token = mockSendVerify.mock.calls[0][1];
 
@@ -238,7 +309,7 @@ describe('verifyEmail', () => {
 
 describe('resendVerification', () => {
     it('отправляет письмо для неподтверждённого юзера', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         // register шлёт письмо через void promise — дождёмся до сброса мока
         await new Promise((r) => setImmediate(r));
         mockSendVerify.mockReset();
@@ -250,7 +321,7 @@ describe('resendVerification', () => {
     });
 
     it('не отправляет повторно если email уже подтверждён', async () => {
-        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A' });
+        await register({ email: 'a@b.c', password: 'goodpass1', name: 'A', phone: '+79991234567' });
         await new Promise((r) => setImmediate(r));
         const token = mockSendVerify.mock.calls[0][1];
         await verifyEmail(token);

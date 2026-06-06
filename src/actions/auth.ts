@@ -7,11 +7,17 @@ import {
     login,
     requestMagicLink,
     resendVerification,
+    createTelegramVerifyLink,
     type RegisterInput,
     type LoginInput,
 } from '@/services/auth';
 import { createSession, invalidateSession } from '@/lib/session';
-import { SESSION_COOKIE, setSessionCookie, clearSessionCookie } from '@/lib/auth';
+import {
+    SESSION_COOKIE,
+    setSessionCookie,
+    clearSessionCookie,
+    getCurrentUser,
+} from '@/lib/auth';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -74,6 +80,18 @@ export async function resendVerificationAction(email: string): Promise<ActionRes
     const result = await resendVerification(email);
     if (!result.ok) return { ok: false, error: result.error };
     return { ok: true };
+}
+
+export type TelegramLinkResult =
+    | { ok: true; url: string }
+    | { ok: false; error: string };
+
+export async function requestTelegramVerifyAction(): Promise<TelegramLinkResult> {
+    const user = await getCurrentUser();
+    if (!user) return { ok: false, error: 'Не авторизованы' };
+    const result = await createTelegramVerifyLink(user.id);
+    if (!result.ok) return { ok: false, error: result.error };
+    return { ok: true, url: result.data.url };
 }
 
 export async function logoutAction(): Promise<void> {

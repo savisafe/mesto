@@ -53,7 +53,7 @@ async function main() {
         // --- setup ---
         const [owner] = await db
             .insert(users)
-            .values({ email: `${tag}@test.local`, passwordHash: 'x', name: 'E2E Owner' })
+            .values({ email: `${tag}@test.local`, passwordHash: 'x', name: 'E2E Owner', phone: '+70000000000' })
             .returning();
         ownerId = owner.id;
         const [biz] = await db

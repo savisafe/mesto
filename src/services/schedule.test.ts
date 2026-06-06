@@ -25,7 +25,7 @@ const mockGetCurrentUser = vi.mocked(getCurrentUser);
 async function makeUser(email: string): Promise<PublicUser> {
     const [u] = await db
         .insert(schema.users)
-        .values({ email, passwordHash: 'x', name: email })
+        .values({ email, passwordHash: 'x', name: email, phone: '+70000000000' })
         .returning();
     return toPublicUser(u);
 }

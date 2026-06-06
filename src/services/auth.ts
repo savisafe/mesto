@@ -11,6 +11,7 @@ import {
     toPublicUser,
 } from '@/db/schema';
 import { randomToken, sha256 } from '@/lib/crypto';
+import { buildStartLink } from '@/lib/telegram';
 import { sendVerifyEmail, sendMagicLinkEmail } from './email';
 
 const EMAIL_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 час
@@ -24,7 +25,7 @@ export interface RegisterInput {
     email: string;
     password: string;
     name: string;
-    phone?: string;
+    phone: string;
 }
 
 export interface LoginInput {
@@ -40,10 +41,19 @@ function looksLikeEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+// Телефон храним в нормализованном виде: только `+` и цифры.
+function normalizePhone(value: string): string {
+    return value.replace(/[\s()\-.]/g, '');
+}
+
+function looksLikePhone(value: string): boolean {
+    return /^\+?\d{7,15}$/.test(value);
+}
+
 export async function register(input: RegisterInput): Promise<ServiceResult<PublicUser>> {
     const email = normalizeEmail(input.email);
     const name = input.name?.trim() ?? '';
-    const phone = input.phone?.trim() || null;
+    const phone = normalizePhone(input.phone?.trim() ?? '');
 
     if (!looksLikeEmail(email)) {
         return { ok: false, error: 'Некорректный email', code: 'INVALID_EMAIL' };
@@ -57,6 +67,12 @@ export async function register(input: RegisterInput): Promise<ServiceResult<Publ
     }
     if (!name) {
         return { ok: false, error: 'Имя обязательно', code: 'INVALID_NAME' };
+    }
+    if (!phone) {
+        return { ok: false, error: 'Телефон обязателен', code: 'PHONE_REQUIRED' };
+    }
+    if (!looksLikePhone(phone)) {
+        return { ok: false, error: 'Некорректный номер телефона', code: 'INVALID_PHONE' };
     }
 
     const existing = await db
@@ -181,6 +197,44 @@ export async function requestMagicLink(email: string): Promise<ServiceResult<{ s
         await sendMagicLinkEmail(user.email, token);
     }
     return { ok: true, data: { sent: true } };
+}
+
+// Создаёт одноразовый токен и собирает deep-link на Telegram-бота. Пользователь
+// открывает ссылку, жмёт Start — webhook бота получит токен и подтвердит аккаунт.
+export async function createTelegramVerifyLink(
+    userId: string,
+): Promise<ServiceResult<{ url: string }>> {
+    const token = await createEmailToken(userId, 'telegram_verify');
+    const url = buildStartLink(token);
+    if (!url) {
+        return {
+            ok: false,
+            error: 'Подтверждение через Telegram временно недоступно',
+            code: 'TELEGRAM_DISABLED',
+        };
+    }
+    return { ok: true, data: { url } };
+}
+
+// Вызывается из webhook Telegram-бота: токен из /start подтверждает аккаунт и
+// привязывает chat_id. Подтверждение Telegram приравнивается к верификации
+// аккаунта (тот же флаг isEmailVerified, что и для email/magic-link).
+export async function confirmTelegram(
+    token: string,
+    chatId: string,
+): Promise<ServiceResult<PublicUser>> {
+    const user = await consumeEmailToken(token, 'telegram_verify');
+    if (!user) {
+        return { ok: false, error: 'Ссылка недействительна или истекла', code: 'INVALID_TOKEN' };
+    }
+    const updates: Partial<typeof users.$inferInsert> = { telegramChatId: chatId };
+    if (!user.isEmailVerified) {
+        updates.isEmailVerified = true;
+        user.isEmailVerified = true;
+    }
+    user.telegramChatId = chatId;
+    await db.update(users).set(updates).where(eq(users.id, user.id));
+    return { ok: true, data: toPublicUser(user) };
 }
 
 export async function consumeMagicLink(token: string): Promise<ServiceResult<PublicUser>> {

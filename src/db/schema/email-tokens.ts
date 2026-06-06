@@ -1,7 +1,9 @@
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from './users';
 
-export const emailTokenKinds = ['verify', 'magic_link'] as const;
+// 'telegram_verify' — токен из deep-link Telegram-бота (kind хранится как text,
+// отдельная миграция для нового значения не нужна).
+export const emailTokenKinds = ['verify', 'magic_link', 'telegram_verify'] as const;
 export type EmailTokenKind = (typeof emailTokenKinds)[number];
 
 export const emailTokens = pgTable('email_tokens', {
