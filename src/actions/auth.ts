@@ -30,9 +30,14 @@ export async function registerAction(
     input: RegisterInput,
     next?: string,
 ): Promise<ActionResult> {
-    const result = await register(input);
-    if (!result.ok) return { ok: false, error: result.error };
-    await startSession(result.data.id);
+    try {
+        const result = await register(input);
+        if (!result.ok) return { ok: false, error: result.error };
+        await startSession(result.data.id);
+    } catch (err) {
+        console.error('registerAction failed:', err);
+        return { ok: false, error: 'Не удалось завершить регистрацию. Попробуйте позже.' };
+    }
     redirect(safeNext(next));
 }
 
@@ -48,9 +53,14 @@ export async function loginAction(
     input: LoginInput,
     next?: string,
 ): Promise<ActionResult> {
-    const result = await login(input);
-    if (!result.ok) return { ok: false, error: result.error };
-    await startSession(result.data.id);
+    try {
+        const result = await login(input);
+        if (!result.ok) return { ok: false, error: result.error };
+        await startSession(result.data.id);
+    } catch (err) {
+        console.error('loginAction failed:', err);
+        return { ok: false, error: 'Не удалось выполнить вход. Попробуйте позже.' };
+    }
     redirect(safeNext(next));
 }
 
