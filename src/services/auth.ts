@@ -70,13 +70,15 @@ export async function register(input: RegisterInput): Promise<ServiceResult<Publ
 
     const passwordHash = await argon2.hash(input.password);
 
-    // Подтверждение email временно отключено: создаём аккаунт сразу
-    // подтверждённым и не отправляем письмо. Логика verifyEmail/resend
-    // оставлена в коде, чтобы вернуть подтверждение позже.
     const [user] = await db
         .insert(users)
-        .values({ email, passwordHash, name, phone, isEmailVerified: true })
+        .values({ email, passwordHash, name, phone })
         .returning();
+
+    // Не блокируем регистрацию на отправке письма.
+    void sendEmailVerification(user.id, user.email).catch((err) => {
+        console.error('Failed to send verification email:', err);
+    });
 
     return { ok: true, data: toPublicUser(user) };
 }

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import { Header } from '@/ui/header/Header';
 import { Footer } from '@/ui/footer/Footer';
@@ -6,6 +7,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { BusinessProvider } from '@/contexts/BusinessContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ServiceWorkerRegister } from '@/ui/pwa/ServiceWorkerRegister';
+import { EmailVerifyBanner } from '@/ui/auth/EmailVerifyBanner';
+import { VerifyStatusToast } from '@/ui/auth/VerifyStatusToast';
 import { getCurrentUser } from '@/lib/auth';
 
 export const metadata: Metadata = {
@@ -43,8 +46,12 @@ export default async function RootLayout({
                     <AuthProvider initialUser={user}>
                         <BusinessProvider>
                             <Header />
+                            <EmailVerifyBanner />
                             {children}
                             <Footer />
+                            <Suspense fallback={null}>
+                                <VerifyStatusToast />
+                            </Suspense>
                         </BusinessProvider>
                     </AuthProvider>
                 </NotificationProvider>
