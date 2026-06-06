@@ -4,9 +4,10 @@ import { Resend } from 'resend';
 const apiKey = process.env.RESEND_API_KEY;
 const resend = apiKey ? new Resend(apiKey) : null;
 
-// Без своего домена временно используем тестовый sender Resend.
-// После покупки домена и DNS-записей заменить на noreply@<domain>.
-const FROM = 'Mesto <onboarding@resend.dev>';
+// Отправитель: задаётся через EMAIL_FROM (адрес на верифицированном в Resend
+// домене, например 'Mesto <noreply@mesto.pro>'). По умолчанию — тестовый sender
+// Resend, который доставляет письма только на email владельца Resend-аккаунта.
+const FROM = process.env.EMAIL_FROM ?? 'Mesto <onboarding@resend.dev>';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001';
 
