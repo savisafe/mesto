@@ -16,8 +16,10 @@ const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
-    // Не вызываем skipWaiting здесь: новый воркер ждёт, пока клиент
-    // не подтвердит обновление (тост «Обновить») или не закроются все вкладки.
+    // Применяем новый воркер сразу, не дожидаясь закрытия вкладок: установленное
+    // PWA не должно «залипать» на старом билде (иначе server actions старого
+    // деплоя бьются о новый сервер — deployment skew).
+    self.skipWaiting();
     event.waitUntil(caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)));
 });
 
@@ -34,13 +36,6 @@ self.addEventListener('activate', (event) => {
             )
             .then(() => self.clients.claim()),
     );
-});
-
-// Команда от клиента: применить обновление немедленно.
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
 });
 
 const isStaticAsset = (url) =>
