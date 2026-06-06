@@ -6,6 +6,8 @@ import { Menu, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/routes/routes';
+import { Logo } from '@/ui/logo/Logo';
+import { InstallButton } from '@/ui/pwa/InstallButton';
 
 const protectedLinks = [
     { href: routes.DASHBOARD, label: 'Дашборд' },
@@ -42,8 +44,8 @@ export function Header() {
     return (
         <header className="w-full bg-purple-900 bg-opacity-30 border-b border-purple-800 px-6 py-4 relative z-50">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
-                <Link href="/" className="text-2xl font-bold text-white">
-                    Mesto<span className="text-purple-400">.pro</span>
+                <Link href="/" aria-label="На главную">
+                    <Logo size={36} />
                 </Link>
 
                 <nav className="flex [@media(max-width:640px)]:hidden gap-6 text-sm text-purple-300">
@@ -54,7 +56,8 @@ export function Header() {
                     ))}
                 </nav>
 
-                <div className="block [@media(max-width:640px)]:hidden">
+                <div className="flex items-center gap-4 [@media(max-width:640px)]:hidden">
+                    <InstallButton />
                     {user ? (
                         <div className="text-sm text-purple-300">
                             👤 {userName} |{' '}
@@ -101,6 +104,7 @@ export function Header() {
                                 {link.label}
                             </Link>
                         ))}
+                        <InstallButton className="w-full justify-center" />
                         {user ? (
                             <div className="pt-4 border-t border-purple-700 text-sm text-purple-300">
                                 👤 {userName} |{' '}
