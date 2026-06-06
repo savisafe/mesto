@@ -9,6 +9,8 @@ import { routes } from '@/routes/routes';
 import { Logo } from '@/ui/logo/Logo';
 import { InstallButton } from '@/ui/pwa/InstallButton';
 
+const installLink = { href: routes.INSTALL, label: 'Приложение' };
+
 const protectedLinks = [
     { href: routes.DASHBOARD, label: 'Дашборд' },
     { href: routes.CALENDAR, label: 'Календарь' },
@@ -17,9 +19,10 @@ const protectedLinks = [
     { href: routes.EMPLOYEES, label: 'Сотрудники' },
     { href: routes.MY_BUSINESS, label: 'Бизнесы' },
     { href: routes.SETTINGS_API, label: 'API' },
+    installLink,
 ];
 
-const publicLinks: { href: string; label: string }[] = [];
+const publicLinks = [installLink];
 
 export function Header() {
     const ref = useRef<HTMLDivElement | null>(null);
