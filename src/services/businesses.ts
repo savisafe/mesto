@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, lt, ne, or } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     businesses,
@@ -9,6 +9,7 @@ import {
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
+import { slugify } from '@/lib/slug';
 
 export { ARCHIVE_RETENTION_DAYS };
 
@@ -26,6 +27,19 @@ export interface UpdateBusinessInput {
     name?: string;
     description?: string;
     isActive?: boolean;
+    // null/'' очищает slug (публичная страница перестаёт открываться по URL).
+    slug?: string | null;
+    publicBookingEnabled?: boolean;
+}
+
+// Проверка уникальности slug среди других бизнесов (исключая текущий).
+async function isSlugTaken(slug: string, exceptId: string): Promise<boolean> {
+    const [row] = await db
+        .select({ id: businesses.id })
+        .from(businesses)
+        .where(and(eq(businesses.slug, slug), ne(businesses.id, exceptId)))
+        .limit(1);
+    return Boolean(row);
 }
 
 const FORBIDDEN = { ok: false as const, error: 'Нет доступа', code: 'FORBIDDEN' as const };
@@ -146,6 +160,38 @@ export async function updateBusiness(
     }
     if (input.isActive !== undefined) {
         updates.isActive = input.isActive;
+    }
+    if (input.slug !== undefined) {
+        const raw = input.slug?.trim() ?? '';
+        if (!raw) {
+            updates.slug = null;
+        } else {
+            const slug = slugify(raw);
+            if (!slug) {
+                return { ok: false, error: 'Некорректный адрес страницы', code: 'INVALID_SLUG' };
+            }
+            if (await isSlugTaken(slug, id)) {
+                return { ok: false, error: 'Этот адрес уже занят', code: 'SLUG_TAKEN' };
+            }
+            updates.slug = slug;
+        }
+    }
+    if (input.publicBookingEnabled !== undefined) {
+        updates.publicBookingEnabled = input.publicBookingEnabled;
+    }
+
+    // Нельзя включить публичную запись без slug (страница не открылась бы).
+    const nextSlug = updates.slug !== undefined ? updates.slug : existing.slug;
+    const nextEnabled =
+        updates.publicBookingEnabled !== undefined
+            ? updates.publicBookingEnabled
+            : existing.publicBookingEnabled;
+    if (nextEnabled && !nextSlug) {
+        return {
+            ok: false,
+            error: 'Сначала задайте адрес страницы (slug)',
+            code: 'SLUG_REQUIRED',
+        };
     }
 
     const [biz] = await db

@@ -57,6 +57,13 @@
       "when": 1780782098378,
       "tag": "0007_material_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780784495475,
+      "tag": "0008_stiff_dragon_man",
+      "breakpoints": true
     }
   ]
 }

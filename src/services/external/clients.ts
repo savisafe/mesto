@@ -8,6 +8,7 @@ export interface FindOrCreateClientInput {
     name: string;
     phone: string;
     telegramId?: string | null;
+    email?: string | null;
     note?: string | null;
 }
 
@@ -25,6 +26,7 @@ export async function findOrCreateClient(
 ): Promise<FindOrCreateClientResult> {
     const { businessId } = input;
     const telegramId = input.telegramId?.trim() || null;
+    const email = input.email?.trim() || null;
     const phone = input.phone.trim();
     const name = input.name.trim();
 
@@ -43,10 +45,14 @@ export async function findOrCreateClient(
         .where(and(eq(clients.businessId, businessId), eq(clients.phone, phone)))
         .limit(1);
     if (byPhone) {
-        if (telegramId && !byPhone.telegramId) {
+        // Дозаполняем telegramId / email best-effort, если их ещё не было.
+        const patch: Partial<typeof clients.$inferInsert> = {};
+        if (telegramId && !byPhone.telegramId) patch.telegramId = telegramId;
+        if (email && !byPhone.email) patch.email = email;
+        if (Object.keys(patch).length > 0) {
             const [updated] = await db
                 .update(clients)
-                .set({ telegramId })
+                .set(patch)
                 .where(eq(clients.id, byPhone.id))
                 .returning();
             return { client: updated ?? byPhone, created: false };
@@ -56,7 +62,7 @@ export async function findOrCreateClient(
 
     const [created] = await db
         .insert(clients)
-        .values({ businessId, name, phone, telegramId, note: input.note?.trim() || null })
+        .values({ businessId, name, phone, telegramId, email, note: input.note?.trim() || null })
         .returning();
     return { client: created, created: true };
 }
