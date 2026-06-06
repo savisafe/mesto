@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Popup } from '@/ui/popup/Popup';
 import { TextField } from '@/ui/form';
 import { Button } from '@/ui/button/Button';
@@ -8,14 +9,25 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { requestMagicLinkAction } from '@/actions/auth';
 import { routes } from '@/routes/routes';
 
+const RESEND_COOLDOWN_SEC = 60;
+
 export default function LoginOTPPage() {
     const alert = useNotification();
     const [email, setEmail] = useState('');
     const [error, setError] = useState<string | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
 
-    const handleLoginOTP = async () => {
+    useEffect(() => {
+        if (cooldown <= 0) return;
+        const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [cooldown]);
+
+    const handleLoginOTP = async (e: FormEvent) => {
+        e.preventDefault();
+
         if (!email) {
             setError('Введите email');
             return;
@@ -27,6 +39,7 @@ export default function LoginOTPPage() {
             const result = await requestMagicLinkAction(email);
             if (result.ok) {
                 setSent(true);
+                setCooldown(RESEND_COOLDOWN_SEC);
                 alert('success', 'Если такой email зарегистрирован — ссылка отправлена');
             } else {
                 setError(result.error);
@@ -38,31 +51,37 @@ export default function LoginOTPPage() {
         }
     };
 
-    return (
-        <Popup title="Вход через email">
-            <TextField
-                label="Email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={setEmail}
-                error={error}
-                hint={sent ? 'Проверьте почту — мы отправили ссылку для входа' : undefined}
-            />
+    const buttonLabel =
+        cooldown > 0 ? `Повторить через ${cooldown} с` : 'Отправить ссылку входа';
 
-            <div className="flex justify-center mt-4">
-                <Button onClick={handleLoginOTP} loading={loading}>
-                    {loading ? 'Отправляем...' : 'Отправить ссылку входа'}
-                </Button>
-            </div>
+    return (
+        <Popup title="Быстрый вход">
+            <form onSubmit={handleLoginOTP}>
+                <TextField
+                    label="Email"
+                    type="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={email}
+                    onChange={setEmail}
+                    error={error}
+                    hint={sent ? 'Проверьте почту — мы отправили ссылку для входа' : undefined}
+                />
+
+                <div className="flex justify-center mt-4">
+                    <Button type="submit" loading={loading} disabled={cooldown > 0}>
+                        {buttonLabel}
+                    </Button>
+                </div>
+            </form>
 
             <div className="flex justify-between items-center mt-4 text-sm text-purple-400">
-                <a href={routes.LOGIN} className="underline hover:text-purple-300">
+                <Link href={routes.LOGIN} className="underline hover:text-purple-300">
                     Вход
-                </a>
-                <a href={routes.REGISTRATION} className="underline hover:text-purple-300">
+                </Link>
+                <Link href={routes.REGISTRATION} className="underline hover:text-purple-300">
                     Регистрация
-                </a>
+                </Link>
             </div>
         </Popup>
     );

@@ -28,7 +28,7 @@ const getSmtpTransport = (): Transporter | null => {
 // тестовый sender Resend, доставляющий только на email владельца аккаунта.
 const FROM = process.env.EMAIL_FROM ?? 'Mesto <onboarding@resend.dev>';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3001';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 interface SendInput {
     to: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/ui/button/Button';
 import { TextField, PasswordField } from '@/ui/form';
@@ -18,7 +18,9 @@ export default function RegistrationPage() {
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleRegistration = async () => {
+    const handleRegistration = async (e: FormEvent) => {
+        e.preventDefault();
+
         if (password !== confirmPassword) {
             alert('error', 'Пароли не совпадают');
             return;
@@ -49,41 +51,43 @@ export default function RegistrationPage() {
 
     return (
         <Popup title="Регистрация">
-            <TextField label="Имя" autoComplete="name" value={name} onChange={setName} />
-            <TextField
-                label="Email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={setEmail}
-            />
-            <TextField
-                label="Телефон"
-                hint="Обязательно — для подтверждения аккаунта и связи с клиентами"
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={setPhone}
-            />
-            <PasswordField
-                label="Пароль"
-                hint="Минимум 8 символов"
-                autoComplete="new-password"
-                value={password}
-                onChange={setPassword}
-            />
-            <PasswordField
-                label="Повторите пароль"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-            />
+            <form onSubmit={handleRegistration}>
+                <TextField label="Имя" autoComplete="name" autoFocus value={name} onChange={setName} />
+                <TextField
+                    label="Email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={setEmail}
+                />
+                <TextField
+                    label="Телефон"
+                    hint="Обязательно — для подтверждения аккаунта и связи с клиентами"
+                    type="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={setPhone}
+                />
+                <PasswordField
+                    label="Пароль"
+                    hint="Минимум 8 символов"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={setPassword}
+                />
+                <PasswordField
+                    label="Повторите пароль"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                />
 
-            <div className="flex justify-center mt-4">
-                <Button onClick={handleRegistration} loading={loading}>
-                    Зарегистрироваться
-                </Button>
-            </div>
+                <div className="flex justify-center mt-4">
+                    <Button type="submit" loading={loading}>
+                        Зарегистрироваться
+                    </Button>
+                </div>
+            </form>
 
             <p className="mt-6 text-purple-400 text-sm text-center">
                 Есть аккаунт?{' '}

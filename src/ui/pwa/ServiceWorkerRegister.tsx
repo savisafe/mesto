@@ -6,10 +6,36 @@ const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? 'dev';
 const SW_URL = `/sw.js?v=${BUILD_ID}`;
 const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // раз в час
 
+// В dev унаследованный воркер (например, после локального прод-билда на том же
+// localhost) продолжает отдавать устаревшие чанки через stale-while-revalidate,
+// поэтому изменений кода не видно. Просто не регистрировать новый воркер мало —
+// надо снести уже установленный и его кэши.
+const cleanupServiceWorkerInDev = async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+
+    if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+
+    // unregister() не освобождает текущую страницу — ею до перезагрузки управляет
+    // снесённый воркер. Перезагружаемся один раз (флаг страхует от цикла).
+    const RELOAD_FLAG = 'sw-dev-cleaned';
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem(RELOAD_FLAG)) {
+        sessionStorage.setItem(RELOAD_FLAG, '1');
+        window.location.reload();
+    }
+};
+
 export const ServiceWorkerRegister = () => {
     useEffect(() => {
-        if (process.env.NODE_ENV !== 'production') return;
         if (!('serviceWorker' in navigator)) return;
+
+        if (process.env.NODE_ENV !== 'production') {
+            void cleanupServiceWorkerInDev();
+            return;
+        }
 
         let registration: ServiceWorkerRegistration | null = null;
 

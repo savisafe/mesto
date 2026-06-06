@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import './globals.css';
-import { Header } from '@/ui/header/Header';
-import { Footer } from '@/ui/footer/Footer';
+import { AppShell } from '@/ui/nav/AppShell';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { BusinessProvider } from '@/contexts/BusinessContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ServiceWorkerRegister } from '@/ui/pwa/ServiceWorkerRegister';
-import { EmailVerifyBanner } from '@/ui/auth/EmailVerifyBanner';
 import { VerifyStatusToast } from '@/ui/auth/VerifyStatusToast';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -46,10 +44,9 @@ export default async function RootLayout({
                 <NotificationProvider>
                     <AuthProvider initialUser={user}>
                         <BusinessProvider>
-                            <Header />
-                            <EmailVerifyBanner isTelegramEnabled={isTelegramEnabled} />
-                            {children}
-                            <Footer />
+                            <AppShell isTelegramEnabled={isTelegramEnabled}>
+                                {children}
+                            </AppShell>
                             <Suspense fallback={null}>
                                 <VerifyStatusToast />
                             </Suspense>

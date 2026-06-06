@@ -8,23 +8,25 @@ interface PopupProps {
 
 export const Popup = ({children, title}: PopupProps) => {
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-purple-950 to-black flex justify-center items-center">
-            <motion.div
-                className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700"
-                initial={{opacity: 0, y: 40}}
-                animate={{opacity: 1, y: 0}}
-                transition={{duration: 0.6, ease: 'easeOut'}}
-            >
-                <motion.h2
-                    className="text-3xl font-bold text-white mb-6 text-center"
-                    initial={{opacity: 0, y: -20}}
+        <div className="fixed inset-0 bg-gradient-to-br from-purple-950 to-black overflow-y-auto">
+            <div className="flex min-h-full justify-center items-center p-4">
+                <motion.div
+                    className="w-full max-w-md bg-purple-900 bg-opacity-20 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-purple-700"
+                    initial={{opacity: 0, y: 40}}
                     animate={{opacity: 1, y: 0}}
-                    transition={{delay: 0.2}}
+                    transition={{duration: 0.6, ease: 'easeOut'}}
                 >
-                    {title}
-                </motion.h2>
-                {children}
-            </motion.div>
+                    <motion.h2
+                        className="text-3xl font-bold text-white mb-6 text-center"
+                        initial={{opacity: 0, y: -20}}
+                        animate={{opacity: 1, y: 0}}
+                        transition={{delay: 0.2}}
+                    >
+                        {title}
+                    </motion.h2>
+                    {children}
+                </motion.div>
+            </div>
         </div>
     );
 };

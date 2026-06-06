@@ -167,43 +167,7 @@ Reference: https://dikidi.net/1869595 — публичный виджет зап
   редактируемым slug, ссылкой-копировалкой и сеткой фото (drag для
   пересортировки, drop-zone для загрузки)
 
----
-
-### PWA (Progressive Web App)
-
-Чтобы Mesto можно было установить на телефон/десктоп как приложение
-без выкладки в App Store / Google Play. Особенно ценно для
-сотрудников которые проверяют расписание с мобилы.
-
-**Что нужно:**
-- `public/manifest.json` с name/short_name/icons (192/512), `display:
-  standalone`, `theme_color` (фиолетовый), `background_color`,
-  `start_url: /dashboard`
-- Иконки (192, 512, maskable) — генерим через `pwa-asset-generator`
-  из одного svg-логотипа
-- `<link rel="manifest">` в `src/app/layout.tsx`, плюс
-  apple-touch-icon meta-теги для iOS
-- Service Worker через `next-pwa` или `@serwist/next` — кэширует
-  статику (Cache-First для `_next/static`, Network-First для
-  страниц с fallback на offline.html)
-- Offline-страница: показывается когда нет сети и страница не
-  закэширована
-- Web Push (отдельно от PWA-инсталла) — для уведомлений о новых
-  записях из бота / отменах. Требует VAPID-ключей, эндпоинт
-  для подписки, и Notification API. Поднять когда будет ai-bot
-  интеграция
-
-**Где трогать:**
-- `public/manifest.json`, `public/icons/*`
-- `src/app/layout.tsx` — meta-теги
-- `next.config.ts` — обёртка `withSerwist(...)` или `withPWA(...)`
-- `src/lib/push-notifications.ts` (когда дойдём до Web Push)
-- `src/app/api/push/subscribe/route.ts` — приём подписок
-- Колонка в users: `push_subscription_json`
-
 подумать про службу поддержки
 не удобно выставлять график http://localhost:3001/schedule
 не работает ролевая модель
-услуги вынести в отдельную страницу нужен выбор сотрудника 
-мобильная версия PWA
-сообщение появляется не сразу а появляетс планомерно как это пофиксить?
+услуги вынести в отдельную страницу нужен выбор сотрудника

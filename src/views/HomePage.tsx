@@ -3,7 +3,6 @@ import { PillarsSection } from '@/views/home/PillarsSection';
 import { FeaturesSection } from '@/views/home/FeaturesSection';
 import { ResultsSection } from '@/views/home/ResultsSection';
 import { InstallSection } from '@/views/home/InstallSection';
-import { LeadForm } from '@/views/home/LeadForm';
 
 export default function HomePage() {
     return (
@@ -13,7 +12,6 @@ export default function HomePage() {
             <FeaturesSection />
             <ResultsSection />
             <InstallSection />
-            <LeadForm />
         </div>
     );
 }
