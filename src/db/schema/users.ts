@@ -8,9 +8,12 @@ export const users = pgTable('users', {
     email: text('email').notNull().unique(),
     passwordHash: text('password_hash').notNull(),
     name: text('name').notNull(),
-    phone: text('phone'),
+    phone: text('phone').notNull(),
     role: text('role').$type<UserRole>().notNull().default('OWNER'),
     isEmailVerified: boolean('is_email_verified').notNull().default(false),
+    // chat_id пользователя в Telegram-боте (привязывается при подтверждении
+    // аккаунта через deep-link). Нужен, чтобы писать пользователю в Telegram.
+    telegramChatId: text('telegram_chat_id'),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
@@ -33,6 +36,7 @@ export function toPublicUser(user: User): PublicUser {
         phone: user.phone,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
+        telegramChatId: user.telegramChatId,
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

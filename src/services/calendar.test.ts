@@ -32,7 +32,7 @@ const at = (iso: string) => new Date(iso);
 async function makeUser(name: string, role: UserRole = 'OWNER'): Promise<PublicUser> {
     const [u] = await db
         .insert(schema.users)
-        .values({ email: `${name}${Math.random()}@t.local`, passwordHash: 'x', name, role })
+        .values({ email: `${name}${Math.random()}@t.local`, passwordHash: 'x', name, role, phone: '+70000000000' })
         .returning();
     return toPublicUser(u);
 }

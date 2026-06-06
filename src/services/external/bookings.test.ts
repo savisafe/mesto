@@ -30,7 +30,7 @@ const weekdayOf = (d: string, tz: string) => dayjs.tz(d, tz).day();
 async function makeBusiness(isActive = true) {
     const [owner] = await db
         .insert(schema.users)
-        .values({ email: `o${Math.random()}@t.local`, passwordHash: 'x', name: 'Owner' })
+        .values({ email: `o${Math.random()}@t.local`, passwordHash: 'x', name: 'Owner', phone: '+70000000000' })
         .returning();
     const [biz] = await db
         .insert(schema.businesses)
@@ -42,7 +42,7 @@ async function makeBusiness(isActive = true) {
 async function makeMember(businessId: string, name: string) {
     const [u] = await db
         .insert(schema.users)
-        .values({ email: `e${Math.random()}@t.local`, passwordHash: 'x', name })
+        .values({ email: `e${Math.random()}@t.local`, passwordHash: 'x', name, phone: '+70000000000' })
         .returning();
     await db.insert(schema.businessMembers).values({ businessId, userId: u.id, role: 'EMPLOYEE' });
     return u;

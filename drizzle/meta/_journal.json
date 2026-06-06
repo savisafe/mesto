@@ -50,6 +50,13 @@
       "when": 1780085647986,
       "tag": "0005_powerful_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780782098378,
+      "tag": "0007_material_the_anarchist",
+      "breakpoints": true
     }
   ]
 }
