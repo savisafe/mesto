@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AppointmentStatus, TimeOffReason } from '@/db/schema';
 import type { AppointmentDetail } from '@/services/appointments';
 import type { CalendarBlock, CalendarDayData, CalendarWindow } from '@/services/calendar';
@@ -11,11 +11,6 @@ const COL_MIN = 170;
 const AXIS_W = 56;
 const SNAP_MIN = 15;
 const PX_PER_MIN = HOUR_H / 60;
-
-// Сетка живёт в собственном ограниченном скролл-контейнере (sticky-ось + sticky-шапка),
-// а не растягивает страницу. Так вертикальный скролл сетки не конфликтует со скроллом
-// страницы, а время-ось и заголовки колонок всегда видны.
-const GRID_MAX_H = 'calc(100dvh - 15rem)';
 
 type ColumnId = string | null;
 
@@ -157,7 +152,6 @@ export default function CalendarDayGrid({
     onApptClick: (apt: AppointmentDetail) => void;
 }) {
     const dayStartMs = useMemo(() => ms(data.dayStart), [data.dayStart]);
-    const scrollRef = useRef<HTMLDivElement>(null);
 
     // Тик раз в минуту — двигает линию текущего времени без перезагрузки.
     const [now, setNow] = useState(() => Date.now());
@@ -212,24 +206,6 @@ export default function CalendarDayGrid({
         };
     }, [columns, data.appointments, data.blocks, dayStartMs, now]);
 
-    // При загрузке дня прокручиваем сетку к текущему времени (или к первой записи),
-    // чтобы не упираться в пустые ранние часы. Один раз на загрузку данных.
-    useEffect(() => {
-        const el = scrollRef.current;
-        if (!el) return;
-        const nowOff = (Date.now() - dayStartMs) / 60000;
-        let target: number | null =
-            nowOff >= lo && nowOff <= hi ? (nowOff - lo) * PX_PER_MIN : null;
-        if (target === null) {
-            const apptTops = data.appointments
-                .map((a) => (clampDay((ms(a.startsAt) - dayStartMs) / 60000) - lo) * PX_PER_MIN)
-                .filter((t) => t >= 0);
-            if (apptTops.length) target = Math.min(...apptTops);
-        }
-        el.scrollTop = target === null ? 0 : Math.max(0, target - 80);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data]);
-
     const businessBlocks = useMemo(
         () => data.blocks.filter((b) => b.employeeUserId === null),
         [data.blocks],
@@ -273,22 +249,29 @@ export default function CalendarDayGrid({
     };
 
     return (
-        <div className="bg-white/5 border border-purple-700/40 rounded-2xl overflow-hidden">
-            <div
-                ref={scrollRef}
-                className="overflow-auto overscroll-contain"
-                style={{ maxHeight: GRID_MAX_H }}
-            >
-                <div className="relative" style={{ minWidth: AXIS_W + columns.length * COL_MIN }}>
-                    {/* Шапка: угол-ось + заголовки колонок. Липнет к верху при скролле. */}
-                    <div
-                        className="sticky top-0 z-50 flex bg-purple-950/90 backdrop-blur"
-                        style={{ height: HEADER_H }}
-                    >
+        <div className="flex bg-white/5 border border-purple-700/40 rounded-2xl overflow-hidden">
+            {/* Левая ось времени */}
+            <div className="shrink-0 bg-purple-900/20" style={{ width: AXIS_W }}>
+                <div style={{ height: HEADER_H }} className="border-b border-purple-700/30" />
+                <div className="relative" style={{ height: totalH }}>
+                    {hours.map((m) => (
                         <div
-                            className="sticky left-0 z-10 shrink-0 border-b border-purple-700/30 bg-purple-950/90"
-                            style={{ width: AXIS_W }}
-                        />
+                            key={m}
+                            className="absolute right-2 -translate-y-1/2 text-xs text-purple-400 tabular-nums"
+                            style={{ top: (m - lo) * PX_PER_MIN }}
+                        >
+                            {hourLabel(m)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Колонки скроллятся по горизонтали; вертикаль отдана странице (один общий скролл).
+                overflow-y-hidden — чтобы overflow-x-auto не порождал паразитный вертикальный скролл. */}
+            <div className="flex-1 overflow-x-auto overflow-y-hidden">
+                <div style={{ minWidth: columns.length * COL_MIN }}>
+                    {/* Заголовки колонок */}
+                    <div className="flex" style={{ height: HEADER_H }}>
                         {columns.map((col) => (
                             <div
                                 key={col.id ?? '__none__'}
@@ -301,148 +284,131 @@ export default function CalendarDayGrid({
                         ))}
                     </div>
 
-                    {/* Тело: время-ось (липнет слева) + область колонок. */}
-                    <div className="flex" style={{ height: totalH }}>
-                        <div
-                            className="sticky left-0 z-40 shrink-0 relative bg-purple-950/80 backdrop-blur"
-                            style={{ width: AXIS_W }}
-                        >
-                            {hours.map((m) => (
+                    {/* Тело сетки */}
+                    <div className="relative flex" style={{ height: totalH }}>
+                        {/* Часовые линии */}
+                        {hours.map((m) => (
+                            <div
+                                key={m}
+                                className="absolute inset-x-0 border-t border-purple-700/20 pointer-events-none"
+                                style={{ top: (m - lo) * PX_PER_MIN }}
+                            />
+                        ))}
+
+                        {/* Блоки всего бизнеса — на все колонки */}
+                        {businessBlocks.map((b) => {
+                            const { top, height } = spanTopHeight(b.startsAt, b.endsAt);
+                            return (
                                 <div
-                                    key={m}
-                                    className="absolute right-2 -translate-y-1/2 text-xs text-purple-400 tabular-nums"
-                                    style={{ top: (m - lo) * PX_PER_MIN }}
+                                    key={b.id}
+                                    className="absolute inset-x-0 border-y border-rose-400/30 z-20 pointer-events-none flex items-center justify-center"
+                                    style={{ top, height, ...stripeStyle('rgba(244,63,94,0.18)') }}
                                 >
-                                    {hourLabel(m)}
+                                    <span className="text-xs text-rose-200/90 font-medium px-2 py-0.5 bg-rose-950/40 rounded">
+                                        {REASON_LABEL[b.reason]}
+                                        {b.note ? ` · ${b.note}` : ''}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
 
-                        <div className="relative flex flex-1">
-                            {/* Часовые линии */}
-                            {hours.map((m) => (
+                        {/* Колонки */}
+                        {columns.map((col) => {
+                            const placed = placedByColumn.get(col.id) ?? [];
+                            const colBlocks = blocksByColumn.get(col.id) ?? [];
+                            return (
                                 <div
-                                    key={m}
-                                    className="absolute inset-x-0 border-t border-purple-700/20 pointer-events-none"
-                                    style={{ top: (m - lo) * PX_PER_MIN }}
-                                />
-                            ))}
+                                    key={col.id ?? '__none__'}
+                                    className="relative flex-1 border-l border-purple-700/30"
+                                    style={{ minWidth: COL_MIN }}
+                                >
+                                    {/* Подсветка рабочих часов */}
+                                    {col.windows.map((w, i) => {
+                                        const top = (Math.max(lo, w.startMinute) - lo) * PX_PER_MIN;
+                                        const height =
+                                            (Math.min(hi, w.endMinute) - Math.max(lo, w.startMinute)) *
+                                            PX_PER_MIN;
+                                        if (height <= 0) return null;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className="absolute inset-x-0 bg-white/[0.04] pointer-events-none"
+                                                style={{ top, height }}
+                                            />
+                                        );
+                                    })}
 
-                            {/* Блоки всего бизнеса — на все колонки */}
-                            {businessBlocks.map((b) => {
-                                const { top, height } = spanTopHeight(b.startsAt, b.endsAt);
-                                return (
+                                    {/* Клик-слой для создания записи */}
                                     <div
-                                        key={b.id}
-                                        className="absolute inset-x-0 border-y border-rose-400/30 z-20 pointer-events-none flex items-center justify-center"
-                                        style={{ top, height, ...stripeStyle('rgba(244,63,94,0.18)') }}
-                                    >
-                                        <span className="text-xs text-rose-200/90 font-medium px-2 py-0.5 bg-rose-950/40 rounded">
-                                            {REASON_LABEL[b.reason]}
-                                            {b.note ? ` · ${b.note}` : ''}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                        className="absolute inset-0 cursor-pointer"
+                                        onClick={(e) => handleColumnClick(col.id, e)}
+                                        title="Нажмите, чтобы создать запись"
+                                    />
 
-                            {/* Колонки */}
-                            {columns.map((col) => {
-                                const placed = placedByColumn.get(col.id) ?? [];
-                                const colBlocks = blocksByColumn.get(col.id) ?? [];
-                                return (
-                                    <div
-                                        key={col.id ?? '__none__'}
-                                        className="relative flex-1 border-l border-purple-700/30"
-                                        style={{ minWidth: COL_MIN }}
-                                    >
-                                        {/* Подсветка рабочих часов */}
-                                        {col.windows.map((w, i) => {
-                                            const top = (Math.max(lo, w.startMinute) - lo) * PX_PER_MIN;
-                                            const height =
-                                                (Math.min(hi, w.endMinute) - Math.max(lo, w.startMinute)) *
-                                                PX_PER_MIN;
-                                            if (height <= 0) return null;
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className="absolute inset-x-0 bg-white/[0.04] pointer-events-none"
-                                                    style={{ top, height }}
-                                                />
-                                            );
-                                        })}
+                                    {/* Блоки сотрудника */}
+                                    {colBlocks.map((b) => {
+                                        const { top, height } = spanTopHeight(b.startsAt, b.endsAt);
+                                        return (
+                                            <div
+                                                key={b.id}
+                                                className="absolute inset-x-0.5 rounded border border-rose-400/30 z-10 flex items-start px-1.5 py-0.5 overflow-hidden"
+                                                style={{ top, height, ...stripeStyle('rgba(244,63,94,0.16)') }}
+                                                title={b.note ?? REASON_LABEL[b.reason]}
+                                            >
+                                                <span className="text-[11px] text-rose-200/90 truncate">
+                                                    {REASON_LABEL[b.reason]}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
 
-                                        {/* Клик-слой для создания записи */}
-                                        <div
-                                            className="absolute inset-0 cursor-pointer"
-                                            onClick={(e) => handleColumnClick(col.id, e)}
-                                            title="Нажмите, чтобы создать запись"
-                                        />
-
-                                        {/* Блоки сотрудника */}
-                                        {colBlocks.map((b) => {
-                                            const { top, height } = spanTopHeight(b.startsAt, b.endsAt);
-                                            return (
-                                                <div
-                                                    key={b.id}
-                                                    className="absolute inset-x-0.5 rounded border border-rose-400/30 z-10 flex items-start px-1.5 py-0.5 overflow-hidden"
-                                                    style={{ top, height, ...stripeStyle('rgba(244,63,94,0.16)') }}
-                                                    title={b.note ?? REASON_LABEL[b.reason]}
-                                                >
-                                                    <span className="text-[11px] text-rose-200/90 truncate">
-                                                        {REASON_LABEL[b.reason]}
-                                                    </span>
+                                    {/* Записи */}
+                                    {placed.map(({ apt, top, height, lane, lanes }) => {
+                                        const widthPct = 100 / lanes;
+                                        return (
+                                            <button
+                                                key={apt.id}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onApptClick(apt);
+                                                }}
+                                                className={`absolute rounded-lg border px-2 py-1 text-left overflow-hidden z-30 cursor-pointer transition hover:brightness-110 ${STATUS_STYLE[apt.status]}`}
+                                                style={{
+                                                    top,
+                                                    height: Math.max(18, height),
+                                                    left: `calc(${lane * widthPct}% + 2px)`,
+                                                    width: `calc(${widthPct}% - 4px)`,
+                                                }}
+                                            >
+                                                <div className="text-[11px] opacity-90 tabular-nums leading-tight">
+                                                    {fmtRange(apt, data.timezone)}
                                                 </div>
-                                            );
-                                        })}
-
-                                        {/* Записи */}
-                                        {placed.map(({ apt, top, height, lane, lanes }) => {
-                                            const widthPct = 100 / lanes;
-                                            return (
-                                                <button
-                                                    key={apt.id}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onApptClick(apt);
-                                                    }}
-                                                    className={`absolute rounded-lg border px-2 py-1 text-left overflow-hidden z-30 cursor-pointer transition hover:brightness-110 ${STATUS_STYLE[apt.status]}`}
-                                                    style={{
-                                                        top,
-                                                        height: Math.max(18, height),
-                                                        left: `calc(${lane * widthPct}% + 2px)`,
-                                                        width: `calc(${widthPct}% - 4px)`,
-                                                    }}
-                                                >
-                                                    <div className="text-[11px] opacity-90 tabular-nums leading-tight">
-                                                        {fmtRange(apt, data.timezone)}
+                                                <div className="text-xs font-medium truncate leading-tight">
+                                                    {apt.client.name}
+                                                </div>
+                                                {height > 44 && apt.service && (
+                                                    <div className="text-[11px] opacity-80 truncate leading-tight">
+                                                        {apt.service.name}
                                                     </div>
-                                                    <div className="text-xs font-medium truncate leading-tight">
-                                                        {apt.client.name}
-                                                    </div>
-                                                    {height > 44 && apt.service && (
-                                                        <div className="text-[11px] opacity-80 truncate leading-tight">
-                                                            {apt.service.name}
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                );
-                            })}
-
-                            {/* Линия текущего времени */}
-                            {nowTop !== null && (
-                                <div
-                                    className="absolute inset-x-0 z-40 pointer-events-none"
-                                    style={{ top: nowTop }}
-                                >
-                                    <div className="relative border-t-2 border-red-500">
-                                        <div className="absolute -left-1 -top-1.5 w-2.5 h-2.5 rounded-full bg-red-500" />
-                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
+                            );
+                        })}
+
+                        {/* Линия текущего времени */}
+                        {nowTop !== null && (
+                            <div
+                                className="absolute inset-x-0 z-40 pointer-events-none"
+                                style={{ top: nowTop }}
+                            >
+                                <div className="relative border-t-2 border-red-500">
+                                    <div className="absolute -left-1 -top-1.5 w-2.5 h-2.5 rounded-full bg-red-500" />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
