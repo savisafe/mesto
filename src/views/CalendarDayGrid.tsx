@@ -251,8 +251,10 @@ export default function CalendarDayGrid({
         onSlotClick(colId, new Date(dayStartMs + minute * 60000));
     };
 
+    // isolate на корне — собственный stacking-контекст, чтобы внутренние z-index
+    // записей и линии «сейчас» не перекрывали липкую шапку при скролле.
     return (
-        <div className="flex bg-white/5 border border-purple-700/40 rounded-2xl overflow-hidden">
+        <div className="isolate flex bg-white/5 border border-purple-700/40 rounded-2xl overflow-hidden">
             {/* Левая ось времени */}
             <div className="shrink-0 bg-purple-900/20" style={{ width: AXIS_W }}>
                 <div style={{ height: HEADER_H }} className="border-b border-purple-700/30" />
