@@ -23,6 +23,8 @@ export interface CreateBusinessInput {
     isActive?: boolean;
 }
 
+export type PublicTheme = 'light' | 'dark';
+
 export interface UpdateBusinessInput {
     name?: string;
     description?: string;
@@ -30,7 +32,12 @@ export interface UpdateBusinessInput {
     // null/'' очищает slug (публичная страница перестаёт открываться по URL).
     slug?: string | null;
     publicBookingEnabled?: boolean;
+    // Оформление публичной страницы.
+    publicTheme?: PublicTheme;
+    publicAccentColor?: string;
 }
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 // Проверка уникальности slug среди других бизнесов (исключая текущий).
 async function isSlugTaken(slug: string, exceptId: string): Promise<boolean> {
@@ -178,6 +185,19 @@ export async function updateBusiness(
     }
     if (input.publicBookingEnabled !== undefined) {
         updates.publicBookingEnabled = input.publicBookingEnabled;
+    }
+    if (input.publicTheme !== undefined) {
+        if (input.publicTheme !== 'light' && input.publicTheme !== 'dark') {
+            return { ok: false, error: 'Некорректная тема', code: 'INVALID_THEME' };
+        }
+        updates.publicTheme = input.publicTheme;
+    }
+    if (input.publicAccentColor !== undefined) {
+        const color = input.publicAccentColor.trim().toLowerCase();
+        if (!HEX_COLOR.test(color)) {
+            return { ok: false, error: 'Некорректный цвет (нужен #rrggbb)', code: 'INVALID_COLOR' };
+        }
+        updates.publicAccentColor = color;
     }
 
     // Нельзя включить публичную запись без slug (страница не открылась бы).
