@@ -44,13 +44,13 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-950 to-black p-4">
+        <div className="w-full max-w-2xl mx-auto">
             <motion.form
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 onSubmit={handleSave}
-                className="w-full max-w-2xl bg-purple-900 bg-opacity-50 backdrop-blur-md p-8 rounded-2xl text-white space-y-8"
+                className="w-full bg-purple-900 bg-opacity-50 backdrop-blur-md p-5 sm:p-8 rounded-2xl text-white space-y-8"
             >
                 <h1 className="text-center text-3xl font-bold">Настройки студии</h1>
 
@@ -118,12 +118,12 @@ export default function SettingsPage() {
                             <option>UTC+06:00</option>
                             <option>UTC+09:00</option>
                         </select>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                             <input type="time" value={workStart} onChange={(e)=>setWorkStart(e.target.value)}
-                                   className="flex-1 px-4 py-2 rounded bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                            <span className="px-2">—</span>
+                                   className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <span className="px-1">—</span>
                             <input type="time" value={workEnd} onChange={(e)=>setWorkEnd(e.target.value)}
-                                   className="flex-1 px-4 py-2 rounded bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                   className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500" />
                         </div>
                     </div>
                 </section>
@@ -135,27 +135,27 @@ export default function SettingsPage() {
                     >Доп. функции</motion.h2>
                     <div className="space-y-4">
                         {integrations.map((intg, idx) => (
-                            <motion.div key={idx} className="flex gap-2"
+                            <motion.div key={idx} className="flex flex-col sm:flex-row gap-2"
                                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.1 }}
                             >
-                                <input type="text" value={intg.name} readOnly className="flex-1 px-4 py-2 rounded bg-purple-800 text-purple-200" />
-                                <input type="url" value={intg.url} readOnly className="flex-1 px-4 py-2 rounded bg-purple-800 text-purple-200" />
+                                <input type="text" value={intg.name} readOnly className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 text-purple-200" />
+                                <input type="url" value={intg.url} readOnly className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 text-purple-200" />
                                 <button type="button" onClick={()=>handleRemoveIntegration(idx)}
-                                        className="px-3 py-2 bg-red-600 hover:bg-red-500 rounded"
+                                        className="px-3 py-2 bg-red-600 hover:bg-red-500 rounded shrink-0"
                                 >Удалить</button>
                             </motion.div>
                         ))}
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-                                    className="flex gap-2"
+                                    className="flex flex-col sm:flex-row gap-2"
                         >
                             <input type="text" placeholder="Название сервиса" value={newIntegration.name}
                                    onChange={(e: ChangeEvent<HTMLInputElement>)=>setNewIntegration({...newIntegration,name:e.target.value})}
-                                   className="flex-1 px-4 py-2 rounded bg-purple-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                   className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
                             <input type="url" placeholder="URL" value={newIntegration.url}
                                    onChange={(e: ChangeEvent<HTMLInputElement>)=>setNewIntegration({...newIntegration,url:e.target.value})}
-                                   className="flex-1 px-4 py-2 rounded bg-purple-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                   className="flex-1 min-w-0 px-4 py-2 rounded bg-purple-800 placeholder-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
                             <button type="button" onClick={handleAddIntegration}
-                                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded"
+                                    className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded shrink-0"
                             >+ Добавить</button>
                         </motion.div>
                     </div>
