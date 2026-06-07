@@ -13,7 +13,7 @@ import {
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { checkBusinessAccess } from './_access';
-import { hasAppointmentConflict } from './availability';
+import { validateSlot, type ValidateSlotCode } from './availability';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -22,6 +22,16 @@ export type ServiceResult<T> =
 const UNAUTHORIZED = { ok: false as const, error: 'Не авторизован', code: 'UNAUTHORIZED' as const };
 const FORBIDDEN = { ok: false as const, error: 'Нет доступа', code: 'FORBIDDEN' as const };
 const NOT_FOUND = { ok: false as const, error: 'Запись не найдена', code: 'NOT_FOUND' as const };
+
+const SLOT_ERROR_MESSAGE: Record<ValidateSlotCode, string> = {
+    OUT_OF_HOURS: 'Это время вне рабочих часов (выходной или нерабочие часы)',
+    BLOCKED: 'На это время в расписании стоит блок',
+    SLOT_CONFLICT: 'У сотрудника уже есть запись в это время',
+};
+
+function slotError(code: ValidateSlotCode): { ok: false; error: string; code: ValidateSlotCode } {
+    return { ok: false, error: SLOT_ERROR_MESSAGE[code], code };
+}
 
 export interface AppointmentDetail {
     id: string;
@@ -225,24 +235,16 @@ export async function createAppointment(
 
     const endsAt = new Date(input.startsAt.getTime() + input.durationMinutes * 60_000);
 
-    // Ручной календарь проверяет только пересечение записей. Рабочие часы и блоки
-    // здесь НЕ навязываются — владелец может записать в любое время (override).
-    // Часы/блоки enforce'ит только внешний API бота (services/external + availability.validateSlot).
-    if (input.employeeUserId) {
-        const conflict = await hasAppointmentConflict(
-            input.businessId,
-            input.employeeUserId,
-            input.startsAt,
-            endsAt,
-        );
-        if (conflict) {
-            return {
-                ok: false,
-                error: 'У сотрудника уже есть запись в это время',
-                code: 'SLOT_CONFLICT',
-            };
-        }
-    }
+    // Единая проверка слота (рабочие часы → блок → конфликт) — та же логика, что у
+    // бота онлайн-записи. Запись вне рабочих часов, в выходной или в блок запрещена
+    // и в ручном календаре. Если график у бизнеса не настроен — час не ограничивается.
+    const validation = await validateSlot({
+        businessId: input.businessId,
+        employeeUserId: input.employeeUserId ?? null,
+        startsAt: input.startsAt,
+        durationMinutes: input.durationMinutes,
+    });
+    if (!validation.ok) return slotError(validation.code);
 
     const [created] = await db
         .insert(appointments)
@@ -317,28 +319,21 @@ export async function updateAppointment(
     if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
     if (input.status !== undefined) updates.status = input.status;
 
-    // Проверка конфликта если меняется время/сотрудник и статус всё ещё активный.
-    // Рабочие часы/блоки в ручном календаре не навязываются (см. createAppointment).
+    // При переносе/смене сотрудника перепроверяем слот целиком (рабочие часы → блок →
+    // конфликт). Смена только статуса/заметки слот не перепроверяет.
     const newStatus = input.status ?? existing.status;
     if (
-        nextEmployee &&
         (newStatus === 'scheduled' || newStatus === 'completed') &&
         (updates.startsAt !== undefined || updates.employeeUserId !== undefined)
     ) {
-        const conflict = await hasAppointmentConflict(
-            existing.businessId,
-            nextEmployee,
-            nextStartsAt,
-            nextEndsAt,
-            id,
-        );
-        if (conflict) {
-            return {
-                ok: false,
-                error: 'У сотрудника уже есть запись в это время',
-                code: 'SLOT_CONFLICT',
-            };
-        }
+        const validation = await validateSlot({
+            businessId: existing.businessId,
+            employeeUserId: nextEmployee,
+            startsAt: nextStartsAt,
+            durationMinutes: nextDuration,
+            excludeAppointmentId: id,
+        });
+        if (!validation.ok) return slotError(validation.code);
     }
 
     const [updated] = await db

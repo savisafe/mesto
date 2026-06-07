@@ -54,6 +54,18 @@ async function makeService(businessId: string, durationMinutes = 60, amount = 50
     return s;
 }
 
+async function makeSchedule(
+    businessId: string,
+    weekday: number,
+    startMinute: number,
+    endMinute: number,
+    employeeUserId: string | null = null,
+) {
+    await db
+        .insert(schema.workSchedules)
+        .values({ businessId, employeeUserId, weekday, startMinute, endMinute });
+}
+
 async function loginAs(user: PublicUser) {
     mockGetCurrentUser.mockResolvedValue(user);
 }
@@ -314,6 +326,82 @@ describe('createAppointment', () => {
         expect(r.ok).toBe(false);
         if (r.ok) return;
         expect(r.code).toBe('INVALID_EMPLOYEE');
+    });
+});
+
+describe('createAppointment — рабочие часы и выходные (validateSlot)', () => {
+    // Часовой пояс бизнеса по умолчанию — Asia/Almaty (UTC+5).
+    // 2026-06-01 — понедельник (weekday=1), 2026-06-07 — воскресенье (weekday=0).
+
+    it('OUT_OF_HOURS — запись в выходной день (нет окна на этот день недели)', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeSchedule(biz.id, 1, 9 * 60, 18 * 60); // только понедельник
+        await loginAs(owner);
+
+        // Воскресенье, 10:00 по Almaty.
+        const r = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            startsAt: new Date('2026-06-07T05:00:00Z'),
+            durationMinutes: 60,
+        });
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('OUT_OF_HOURS');
+    });
+
+    it('OUT_OF_HOURS — запись вне рабочих часов в рабочий день', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeSchedule(biz.id, 1, 9 * 60, 18 * 60);
+        await loginAs(owner);
+
+        // Понедельник, 07:00 по Almaty — до открытия.
+        const r = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            startsAt: new Date('2026-06-01T02:00:00Z'),
+            durationMinutes: 60,
+        });
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('OUT_OF_HOURS');
+    });
+
+    it('успех — запись внутри рабочих часов', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeSchedule(biz.id, 1, 9 * 60, 18 * 60);
+        await loginAs(owner);
+
+        // Понедельник, 15:00–16:00 по Almaty.
+        const r = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            startsAt: new Date('2026-06-01T10:00:00Z'),
+            durationMinutes: 60,
+        });
+        expect(r.ok).toBe(true);
+    });
+
+    it('без настроенного графика — запись разрешена в любое время (обратная совместимость)', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await loginAs(owner);
+
+        // Воскресенье — но графика нет, значит ограничения не применяются.
+        const r = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            startsAt: new Date('2026-06-07T05:00:00Z'),
+            durationMinutes: 60,
+        });
+        expect(r.ok).toBe(true);
     });
 });
 
