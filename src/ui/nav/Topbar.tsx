@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import { Menu as MenuIcon } from 'lucide-react';
-import { InstallButton } from '@/ui/pwa/InstallButton';
 import { getActiveNavLabel } from './navItems';
 import { UserMenu } from './UserMenu';
 
@@ -25,7 +24,6 @@ export const Topbar = ({ onOpenMobileNav }: TopbarProps) => {
             </button>
             <h1 className="truncate text-lg font-semibold text-white">{title}</h1>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
-                <InstallButton />
                 <UserMenu />
             </div>
         </header>
