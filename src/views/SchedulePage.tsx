@@ -6,7 +6,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
-import { TextField, Field } from '@/ui/form';
+import { TextField, Field, DateField, TimeField } from '@/ui/form';
 import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess } from '@/hooks/useAccess';
@@ -328,31 +328,22 @@ export default function SchedulePage() {
                         </>
                     }
                 >
-                    <Field label="Дата">
-                        <input
-                            type="date"
-                            value={form.date}
-                            onChange={(e) => setForm({ ...form, date: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl bg-purple-800/40 text-white border border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                    </Field>
+                    <DateField
+                        label="Дата"
+                        value={form.date}
+                        onChange={(v) => setForm({ ...form, date: v })}
+                    />
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label="С">
-                            <input
-                                type="time"
-                                value={form.start}
-                                onChange={(e) => setForm({ ...form, start: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl bg-purple-800/40 text-white border border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </Field>
-                        <Field label="До">
-                            <input
-                                type="time"
-                                value={form.end}
-                                onChange={(e) => setForm({ ...form, end: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl bg-purple-800/40 text-white border border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </Field>
+                        <TimeField
+                            label="С"
+                            value={form.start}
+                            onChange={(v) => setForm({ ...form, start: v })}
+                        />
+                        <TimeField
+                            label="До"
+                            value={form.end}
+                            onChange={(v) => setForm({ ...form, end: v })}
+                        />
                     </div>
                     <Field label="Причина">
                         <div className="flex flex-wrap gap-2">
