@@ -156,7 +156,21 @@ export default function EmployeesPage() {
 
                 <section className="mb-10">
                     <h2 className="text-xl font-semibold text-white mb-4">Состав</h2>
-                    <div className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl overflow-hidden">
+
+                    {/* Мобильные — карточки, чтобы вся информация была видна без прокрутки вбок */}
+                    <div className="grid gap-3 md:hidden">
+                        {data.members.map((m) => (
+                            <MemberCard
+                                key={m.id}
+                                member={m}
+                                canRemove={data.isOwner && m.role !== 'OWNER'}
+                                onRemove={() => handleRemove(m)}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Десктоп — таблица */}
+                    <div className="hidden md:block bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl overflow-hidden">
                         <table className="w-full text-left">
                             <thead className="bg-white/[0.03] text-purple-300 text-xs uppercase tracking-wider">
                                 <tr>
@@ -198,7 +212,20 @@ export default function EmployeesPage() {
                         <h2 className="text-xl font-semibold text-white mb-4">
                             Ожидают принятия
                         </h2>
-                        <div className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl overflow-hidden">
+
+                        {/* Мобильные — карточки */}
+                        <div className="grid gap-3 md:hidden">
+                            {data.invites.map((inv) => (
+                                <InviteCard
+                                    key={inv.id}
+                                    invite={inv}
+                                    onRevoke={() => handleRevoke(inv)}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Десктоп — таблица */}
+                        <div className="hidden md:block bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl overflow-hidden">
                             <table className="w-full text-left">
                                 <thead className="bg-white/[0.03] text-purple-300 text-xs uppercase tracking-wider">
                                     <tr>
@@ -291,6 +318,54 @@ function StatCard({ label, value }: { label: string; value: number }) {
         <div className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5">
             <p className="text-purple-300 text-sm mb-2">{label}</p>
             <p className="text-3xl font-semibold text-white tracking-tight tabular-nums">{value}</p>
+        </div>
+    );
+}
+
+function MemberCard({
+    member,
+    canRemove,
+    onRemove,
+}: {
+    member: Member;
+    canRemove: boolean;
+    onRemove: () => void;
+}) {
+    return (
+        <div className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-white font-medium">{member.name}</p>
+                <RoleBadge role={member.role} />
+            </div>
+            <p className="text-purple-200 text-sm mt-1 break-all">{member.email}</p>
+            {canRemove && (
+                <button
+                    onClick={onRemove}
+                    className="mt-3 text-sm text-red-400 hover:text-red-300 cursor-pointer"
+                >
+                    Удалить
+                </button>
+            )}
+        </div>
+    );
+}
+
+function InviteCard({ invite, onRevoke }: { invite: PendingInvite; onRevoke: () => void }) {
+    return (
+        <div className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-4">
+            <p className="text-white break-all">{invite.email}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <RoleBadge role={invite.role} />
+                <span className="text-purple-300 text-sm">
+                    Истекает {new Date(invite.expiresAt).toLocaleDateString('ru-RU')}
+                </span>
+                <button
+                    onClick={onRevoke}
+                    className="ml-auto text-sm text-purple-300 hover:text-white cursor-pointer"
+                >
+                    Отозвать
+                </button>
+            </div>
         </div>
     );
 }
