@@ -99,7 +99,7 @@ export function NumberField({
 
 export function inputClasses(error?: string): string {
     return [
-        'w-full px-3 py-2.5 rounded-xl text-white placeholder-purple-400',
+        'w-full min-w-0 px-3 py-2.5 rounded-xl text-white placeholder-purple-400',
         'bg-purple-800/40 border',
         error
             ? 'border-red-500 focus:border-red-400'
