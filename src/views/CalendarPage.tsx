@@ -371,6 +371,12 @@ function AppointmentDetailModal({
             <dl className="space-y-3 text-sm">
                 <Row label="Время">
                     {fmtTime(apt.startsAt, timezone)} — {fmtTime(apt.endsAt, timezone)}
+                    {!isSameLocalDay(apt.startsAt, apt.endsAt, timezone) && (
+                        <span className="text-purple-300">
+                            {' '}
+                            ({fmtDate(apt.endsAt, timezone)})
+                        </span>
+                    )}
                 </Row>
                 <Row label="Статус">
                     <StatusBadge status={apt.status} />
@@ -758,6 +764,26 @@ function fmtTime(d: Date, tz: string): string {
         minute: '2-digit',
         timeZone: tz,
     }).format(new Date(d));
+}
+
+/** "1 янв" в зоне бизнеса — для конца многодневной записи. */
+function fmtDate(d: Date, tz: string): string {
+    return new Intl.DateTimeFormat('ru-RU', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: tz,
+    }).format(new Date(d));
+}
+
+/** Совпадает ли календарный день начала и конца в зоне бизнеса. */
+function isSameLocalDay(a: Date, b: Date, tz: string): boolean {
+    const f = new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: tz,
+    });
+    return f.format(new Date(a)) === f.format(new Date(b));
 }
 
 function formatMoney(amount: number, currency: string): string {
