@@ -10,3 +10,4 @@ export * from './appointments';
 export * from './work-schedules';
 export * from './time-off';
 export * from './api-keys';
+export * from './reviews';

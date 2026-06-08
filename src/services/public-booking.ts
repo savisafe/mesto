@@ -10,6 +10,7 @@ import {
     type ValidateSlotCode,
 } from './availability';
 import { findOrCreateClient } from './external/clients';
+import { getBusinessReviews, type BusinessReviewsData } from './reviews';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -36,6 +37,7 @@ export interface PublicBusiness {
     accentColor: string;
     services: PublicService[];
     team: { id: string; name: string }[];
+    reviews: BusinessReviewsData;
 }
 
 // Резолвит бизнес по slug ТОЛЬКО если публичная запись включена, бизнес активен
@@ -74,6 +76,7 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         .where(and(eq(services.businessId, biz.id), eq(services.isActive, true)));
 
     const team = await getBusinessTeam(biz.id);
+    const reviews = await getBusinessReviews(biz.id);
 
     return {
         id: biz.id,
@@ -87,6 +90,7 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         accentColor: biz.publicAccentColor,
         services: svc,
         team,
+        reviews,
     };
 }
 
