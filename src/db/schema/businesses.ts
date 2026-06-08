@@ -7,6 +7,9 @@ export const businesses = pgTable(
         id: uuid('id').primaryKey().defaultRandom(),
         name: text('name').notNull(),
         description: text('description'),
+        // Контакты для публичной страницы (необязательные).
+        address: text('address'),
+        phone: text('phone'),
         isActive: boolean('is_active').notNull().default(true),
         // Публичный slug для страницы онлайн-записи `/b/<slug>`. null = страница
         // ещё не настроена. Уникален среди всех бизнесов.

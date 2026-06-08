@@ -27,6 +27,8 @@ export interface PublicBusiness {
     id: string;
     name: string;
     description: string | null;
+    address: string | null;
+    phone: string | null;
     timezone: string;
     slug: string;
     /** Оформление страницы, заданное владельцем в настройках. */
@@ -77,6 +79,8 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         id: biz.id,
         name: biz.name,
         description: biz.description,
+        address: biz.address,
+        phone: biz.phone,
         timezone: biz.timezone,
         slug: biz.slug,
         theme: biz.publicTheme === 'dark' ? 'dark' : 'light',

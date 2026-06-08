@@ -22,6 +22,8 @@ export default function SettingsPage() {
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [address, setAddress] = useState('');
+    const [phone, setPhone] = useState('');
     const [saving, setSaving] = useState(false);
 
     // Синхронизируем форму, когда подгрузился/сменился текущий бизнес.
@@ -29,6 +31,8 @@ export default function SettingsPage() {
         if (!business) return;
         setName(business.name);
         setDescription(business.description ?? '');
+        setAddress(business.address ?? '');
+        setPhone(business.phone ?? '');
     }, [business]);
 
     if (!business) {
@@ -50,6 +54,8 @@ export default function SettingsPage() {
             const result = await updateBusiness(business.id, {
                 name: name.trim(),
                 description,
+                address,
+                phone,
             });
             if (result.success) {
                 alert('success', 'Сохранено');
@@ -84,6 +90,19 @@ export default function SettingsPage() {
                             onChange={setDescription}
                             placeholder="Коротко о студии"
                         />
+                        <TextField
+                            label="Адрес (необязательно)"
+                            value={address}
+                            onChange={setAddress}
+                            placeholder="Город, улица, дом"
+                        />
+                        <TextField
+                            label="Телефон (необязательно)"
+                            type="tel"
+                            value={phone}
+                            onChange={setPhone}
+                            placeholder="+7 700 123 45 67"
+                        />
                         <Button onClick={handleSave} loading={saving}>
                             Сохранить
                         </Button>
@@ -94,6 +113,8 @@ export default function SettingsPage() {
                         {business.description && (
                             <InfoRow label="Описание" value={business.description} />
                         )}
+                        {business.address && <InfoRow label="Адрес" value={business.address} />}
+                        {business.phone && <InfoRow label="Телефон" value={business.phone} />}
                         <p className="text-xs text-purple-400">
                             Изменять данные студии может только владелец.
                         </p>
