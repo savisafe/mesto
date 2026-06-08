@@ -13,6 +13,9 @@ export const businesses = pgTable(
         slug: text('slug'),
         // Включена ли публичная страница онлайн-записи владельцем.
         publicBookingEnabled: boolean('public_booking_enabled').notNull().default(false),
+        // Оформление публичной страницы: тема ('light' | 'dark') и акцентный цвет (#rrggbb).
+        publicTheme: text('public_theme').notNull().default('light'),
+        publicAccentColor: text('public_accent_color').notNull().default('#7c3aed'),
         // IANA-зона бизнеса. Все «локальные» часы графика и слоты резолвятся в ней.
         timezone: text('timezone').notNull().default('Asia/Almaty'),
         ownerId: uuid('owner_id')

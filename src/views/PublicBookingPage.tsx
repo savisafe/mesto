@@ -10,10 +10,6 @@ import type { DayAvailability } from '@/services/availability';
 const RANGE_DAYS = 14;
 const ANY = '';
 
-// Акцентный цвет страницы. В следующем PR будет приходить из настроек бизнеса
-// (business.publicAccentColor); пока — фирменный фиолетовый по умолчанию.
-const ACCENT = '#7c3aed';
-
 interface Props {
     business: PublicBusiness;
 }
@@ -22,6 +18,43 @@ interface PickedSlot {
     startsAt: string;
     masterId: string | null;
 }
+
+// Палитра страницы: нейтральные токены зависят от темы, акцент — из настроек бизнеса.
+interface UI {
+    page: string;
+    card: string;
+    sub: string;
+    item: string;
+    itemActive: string;
+    pill: string;
+    radio: string;
+    input: string;
+    bar: string;
+}
+
+const LIGHT: UI = {
+    page: 'bg-zinc-100 text-zinc-900',
+    card: 'bg-white ring-black/5',
+    sub: 'text-zinc-500',
+    item: 'border-zinc-200 hover:bg-zinc-50',
+    itemActive: 'bg-zinc-50',
+    pill: 'border-zinc-200 text-zinc-700 hover:bg-zinc-50',
+    radio: 'border-zinc-300',
+    input: 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400',
+    bar: 'bg-white/90 border-zinc-200',
+};
+
+const DARK: UI = {
+    page: 'bg-zinc-950 text-zinc-100',
+    card: 'bg-zinc-900 ring-white/10',
+    sub: 'text-zinc-400',
+    item: 'border-zinc-800 hover:bg-zinc-800/50',
+    itemActive: 'bg-zinc-800/50',
+    pill: 'border-zinc-700 text-zinc-200 hover:bg-zinc-800',
+    radio: 'border-zinc-600',
+    input: 'bg-zinc-900 border-zinc-700 text-zinc-100 placeholder-zinc-500',
+    bar: 'bg-zinc-900/90 border-zinc-800',
+};
 
 const todayInTz = (tz: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
 const addDays = (date: string, n: number) => {
@@ -39,7 +72,8 @@ function initialsOf(name: string): string {
 export const PublicBookingPage = ({ business }: Props) => {
     const alert = useNotification();
     const tz = business.timezone;
-    const accent = ACCENT;
+    const accent = business.accentColor;
+    const ui = business.theme === 'dark' ? DARK : LIGHT;
 
     const [serviceId, setServiceId] = useState(business.services[0]?.id ?? '');
     const [employeeId, setEmployeeId] = useState<string>(ANY);
@@ -155,8 +189,8 @@ export const PublicBookingPage = ({ business }: Props) => {
 
     if (confirmed) {
         return (
-            <main className="min-h-screen bg-zinc-100 px-4 py-10 text-zinc-900">
-                <div className="mx-auto mt-10 max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-black/5">
+            <main className={clsx('min-h-screen px-4 py-10', ui.page)}>
+                <div className={clsx('mx-auto mt-10 max-w-md rounded-2xl p-8 text-center shadow-sm ring-1', ui.card)}>
                     <div
                         className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-3xl text-white"
                         style={{ backgroundColor: accent }}
@@ -164,12 +198,12 @@ export const PublicBookingPage = ({ business }: Props) => {
                         ✓
                     </div>
                     <h1 className="mb-2 text-2xl font-bold">Вы записаны!</h1>
-                    <p className="text-zinc-600">
+                    <p className={ui.sub}>
                         {confirmed.service}
                         <br />
                         {formatDayLabel(confirmed.startsAt, tz)}, {formatTime(confirmed.startsAt, tz)}
                     </p>
-                    <p className="mt-4 text-sm text-zinc-400">«{business.name}» ждёт вас.</p>
+                    <p className={clsx('mt-4 text-sm', ui.sub)}>«{business.name}» ждёт вас.</p>
                 </div>
             </main>
         );
@@ -180,15 +214,15 @@ export const PublicBookingPage = ({ business }: Props) => {
         : 'Записаться';
 
     return (
-        <main className="min-h-screen bg-zinc-100 text-zinc-900">
+        <main className={clsx('min-h-screen', ui.page)}>
             <div className="mx-auto max-w-md space-y-4 px-4 pb-28 pt-5">
                 {/* Шапка бизнеса */}
-                <header className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+                <header className={clsx('flex items-center gap-4 rounded-2xl p-5 shadow-sm ring-1', ui.card)}>
                     <Avatar name={business.name} accent={accent} />
                     <div className="min-w-0">
                         <h1 className="truncate text-xl font-bold">{business.name}</h1>
                         {business.description && (
-                            <p className="mt-0.5 line-clamp-2 text-sm text-zinc-500">
+                            <p className={clsx('mt-0.5 line-clamp-2 text-sm', ui.sub)}>
                                 {business.description}
                             </p>
                         )}
@@ -196,13 +230,13 @@ export const PublicBookingPage = ({ business }: Props) => {
                 </header>
 
                 {business.services.length === 0 ? (
-                    <Card>
-                        <p className="text-center text-zinc-500">Пока нет услуг для записи.</p>
+                    <Card ui={ui}>
+                        <p className={clsx('text-center', ui.sub)}>Пока нет услуг для записи.</p>
                     </Card>
                 ) : (
                     <>
                         {/* Услуги */}
-                        <Card title="Услуги" count={business.services.length}>
+                        <Card ui={ui} title="Услуги" count={business.services.length}>
                             <div className="space-y-2">
                                 {business.services.map((s) => {
                                     const active = s.id === serviceId;
@@ -212,22 +246,18 @@ export const PublicBookingPage = ({ business }: Props) => {
                                             onClick={() => setServiceId(s.id)}
                                             className={clsx(
                                                 'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition',
-                                                active
-                                                    ? 'bg-zinc-50'
-                                                    : 'border-zinc-200 hover:bg-zinc-50',
+                                                active ? ui.itemActive : ui.item,
                                             )}
                                             style={active ? { borderColor: accent } : undefined}
                                         >
                                             <span className="min-w-0 flex-1">
-                                                <span className="block font-medium text-zinc-900">
-                                                    {s.name}
-                                                </span>
-                                                <span className="text-sm text-zinc-500">
+                                                <span className="block font-medium">{s.name}</span>
+                                                <span className={clsx('text-sm', ui.sub)}>
                                                     {formatMoney(s.amount, s.currency)} ·{' '}
                                                     {formatDuration(s.durationMinutes)}
                                                 </span>
                                             </span>
-                                            <Radio active={active} accent={accent} />
+                                            <Radio active={active} accent={accent} ui={ui} />
                                         </button>
                                     );
                                 })}
@@ -235,20 +265,22 @@ export const PublicBookingPage = ({ business }: Props) => {
                         </Card>
 
                         {/* Специалист */}
-                        <Card title="Специалист">
+                        <Card ui={ui} title="Специалист">
                             <div className="flex flex-wrap gap-2">
-                                <MasterChip
+                                <Chip
                                     label="Любой"
                                     active={employeeId === ANY}
                                     accent={accent}
+                                    ui={ui}
                                     onClick={() => setEmployeeId(ANY)}
                                 />
                                 {business.team.map((t) => (
-                                    <MasterChip
+                                    <Chip
                                         key={t.id}
                                         label={t.name}
                                         active={employeeId === t.id}
                                         accent={accent}
+                                        ui={ui}
                                         onClick={() => setEmployeeId(t.id)}
                                     />
                                 ))}
@@ -256,96 +288,54 @@ export const PublicBookingPage = ({ business }: Props) => {
                         </Card>
 
                         {/* Дата и время */}
-                        <Card title="Дата и время">
+                        <Card ui={ui} title="Дата и время">
                             {loadingSlots ? (
-                                <p className="text-sm text-zinc-500">Загружаем расписание…</p>
+                                <p className={clsx('text-sm', ui.sub)}>Загружаем расписание…</p>
                             ) : openDays.length === 0 ? (
-                                <p className="text-sm text-zinc-500">
+                                <p className={clsx('text-sm', ui.sub)}>
                                     Нет свободных слотов в ближайшие {RANGE_DAYS} дней.
                                 </p>
                             ) : (
                                 <>
                                     <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                                        {openDays.map((d) => {
-                                            const active = d.date === selectedDate;
-                                            return (
-                                                <button
-                                                    key={d.date}
-                                                    onClick={() => {
-                                                        setSelectedDate(d.date);
-                                                        setSlot(null);
-                                                    }}
-                                                    className={clsx(
-                                                        'shrink-0 rounded-xl border px-3 py-2 text-sm transition',
-                                                        active
-                                                            ? 'text-white'
-                                                            : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50',
-                                                    )}
-                                                    style={
-                                                        active
-                                                            ? { backgroundColor: accent, borderColor: accent }
-                                                            : undefined
-                                                    }
-                                                >
-                                                    {formatDayLabel(`${d.date}T00:00:00Z`, 'UTC')}
-                                                </button>
-                                            );
-                                        })}
+                                        {openDays.map((d) => (
+                                            <Chip
+                                                key={d.date}
+                                                label={formatDayLabel(`${d.date}T00:00:00Z`, 'UTC')}
+                                                active={d.date === selectedDate}
+                                                accent={accent}
+                                                ui={ui}
+                                                shape="rounded-xl"
+                                                onClick={() => {
+                                                    setSelectedDate(d.date);
+                                                    setSlot(null);
+                                                }}
+                                            />
+                                        ))}
                                     </div>
                                     <div className="flex flex-wrap gap-2 pt-3">
-                                        {daySlots.map((s) => {
-                                            const active = slot?.startsAt === s.startsAt;
-                                            return (
-                                                <button
-                                                    key={s.startsAt}
-                                                    onClick={() => setSlot(s)}
-                                                    className={clsx(
-                                                        'rounded-lg border px-3 py-1.5 text-sm transition',
-                                                        active
-                                                            ? 'text-white'
-                                                            : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50',
-                                                    )}
-                                                    style={
-                                                        active
-                                                            ? { backgroundColor: accent, borderColor: accent }
-                                                            : undefined
-                                                    }
-                                                >
-                                                    {formatTime(s.startsAt, tz)}
-                                                </button>
-                                            );
-                                        })}
+                                        {daySlots.map((s) => (
+                                            <Chip
+                                                key={s.startsAt}
+                                                label={formatTime(s.startsAt, tz)}
+                                                active={slot?.startsAt === s.startsAt}
+                                                accent={accent}
+                                                ui={ui}
+                                                shape="rounded-lg"
+                                                onClick={() => setSlot(s)}
+                                            />
+                                        ))}
                                     </div>
                                 </>
                             )}
                         </Card>
 
                         {/* Контактные данные */}
-                        <Card title="Ваши данные">
+                        <Card ui={ui} title="Ваши данные">
                             <div className="space-y-3">
-                                <LInput
-                                    label="Имя"
-                                    autoComplete="name"
-                                    value={name}
-                                    onChange={setName}
-                                    accent={accent}
-                                />
-                                <LInput
-                                    label="Телефон"
-                                    type="tel"
-                                    autoComplete="tel"
-                                    value={phone}
-                                    onChange={setPhone}
-                                    accent={accent}
-                                />
-                                <LInput
-                                    label="Email (необязательно)"
-                                    type="email"
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={setEmail}
-                                    accent={accent}
-                                />
+                                <LInput label="Имя" autoComplete="name" value={name} onChange={setName} accent={accent} ui={ui} />
+                                <LInput label="Телефон" type="tel" autoComplete="tel" value={phone} onChange={setPhone} accent={accent} ui={ui} />
+                                <LInput label="Email (необязательно)" type="email" autoComplete="email" value={email} onChange={setEmail} accent={accent} ui={ui} />
                             </div>
                         </Card>
                     </>
@@ -354,7 +344,7 @@ export const PublicBookingPage = ({ business }: Props) => {
 
             {/* Липкая кнопка записи */}
             {business.services.length > 0 && (
-                <div className="fixed inset-x-0 bottom-0 border-t border-zinc-200 bg-white/90 p-3 backdrop-blur">
+                <div className={clsx('fixed inset-x-0 bottom-0 border-t p-3 backdrop-blur', ui.bar)}>
                     <div className="mx-auto max-w-md">
                         <button
                             onClick={handleSubmit}
@@ -372,20 +362,22 @@ export const PublicBookingPage = ({ business }: Props) => {
 };
 
 function Card({
+    ui,
     title,
     count,
     children,
 }: {
+    ui: UI;
     title?: string;
     count?: number;
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+        <section className={clsx('rounded-2xl p-5 shadow-sm ring-1', ui.card)}>
             {title && (
-                <h2 className="mb-3 text-base font-semibold text-zinc-900">
+                <h2 className="mb-3 text-base font-semibold">
                     {title}
-                    {count !== undefined && <span className="ml-1.5 text-zinc-400">{count}</span>}
+                    {count !== undefined && <span className={clsx('ml-1.5', ui.sub)}>{count}</span>}
                 </h2>
             )}
             {children}
@@ -404,12 +396,12 @@ function Avatar({ name, accent }: { name: string; accent: string }) {
     );
 }
 
-function Radio({ active, accent }: { active: boolean; accent: string }) {
+function Radio({ active, accent, ui }: { active: boolean; accent: string; ui: UI }) {
     return (
         <span
             className={clsx(
                 'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-                !active && 'border-zinc-300',
+                !active && ui.radio,
             )}
             style={active ? { borderColor: accent } : undefined}
         >
@@ -418,23 +410,28 @@ function Radio({ active, accent }: { active: boolean; accent: string }) {
     );
 }
 
-function MasterChip({
+function Chip({
     label,
     active,
     accent,
+    ui,
     onClick,
+    shape = 'rounded-full',
 }: {
     label: string;
     active: boolean;
     accent: string;
+    ui: UI;
     onClick: () => void;
+    shape?: string;
 }) {
     return (
         <button
             onClick={onClick}
             className={clsx(
-                'rounded-full border px-4 py-2 text-sm transition',
-                active ? 'text-white' : 'border-zinc-200 text-zinc-700 hover:bg-zinc-50',
+                'shrink-0 border px-4 py-2 text-sm transition',
+                shape,
+                active ? 'text-white' : ui.pill,
             )}
             style={active ? { backgroundColor: accent, borderColor: accent } : undefined}
         >
@@ -450,6 +447,7 @@ function LInput({
     type = 'text',
     autoComplete,
     accent,
+    ui,
 }: {
     label: string;
     value: string;
@@ -457,16 +455,20 @@ function LInput({
     type?: 'text' | 'tel' | 'email';
     autoComplete?: string;
     accent: string;
+    ui: UI;
 }) {
     return (
         <label className="block">
-            <span className="mb-1 block text-sm text-zinc-600">{label}</span>
+            <span className={clsx('mb-1 block text-sm', ui.sub)}>{label}</span>
             <input
                 type={type}
                 value={value}
                 autoComplete={autoComplete}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 placeholder-zinc-400 outline-none transition focus:ring-2"
+                className={clsx(
+                    'w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2',
+                    ui.input,
+                )}
                 style={{ ['--tw-ring-color' as string]: accent } as React.CSSProperties}
             />
         </label>

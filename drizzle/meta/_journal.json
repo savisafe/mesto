@@ -64,6 +64,13 @@
       "when": 1780784495475,
       "tag": "0008_stiff_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780869518565,
+      "tag": "0009_married_wallow",
+      "breakpoints": true
     }
   ]
 }
