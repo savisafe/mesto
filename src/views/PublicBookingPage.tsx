@@ -226,6 +226,18 @@ export const PublicBookingPage = ({ business }: Props) => {
                                 {business.description}
                             </p>
                         )}
+                        {business.address && (
+                            <p className={clsx('mt-1 text-sm', ui.sub)}>{business.address}</p>
+                        )}
+                        {business.phone && (
+                            <a
+                                href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}
+                                className="mt-0.5 inline-block text-sm font-medium"
+                                style={{ color: accent }}
+                            >
+                                {business.phone}
+                            </a>
+                        )}
                     </div>
                 </header>
 

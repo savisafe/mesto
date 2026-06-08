@@ -28,6 +28,8 @@ export type PublicTheme = 'light' | 'dark';
 export interface UpdateBusinessInput {
     name?: string;
     description?: string;
+    address?: string;
+    phone?: string;
     isActive?: boolean;
     // null/'' очищает slug (публичная страница перестаёт открываться по URL).
     slug?: string | null;
@@ -164,6 +166,12 @@ export async function updateBusiness(
     }
     if (input.description !== undefined) {
         updates.description = input.description.trim() || null;
+    }
+    if (input.address !== undefined) {
+        updates.address = input.address.trim() || null;
+    }
+    if (input.phone !== undefined) {
+        updates.phone = input.phone.trim() || null;
     }
     if (input.isActive !== undefined) {
         updates.isActive = input.isActive;

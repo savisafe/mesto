@@ -71,6 +71,13 @@
       "when": 1780869518565,
       "tag": "0009_married_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780950296139,
+      "tag": "0010_wealthy_spirit",
+      "breakpoints": true
     }
   ]
 }
