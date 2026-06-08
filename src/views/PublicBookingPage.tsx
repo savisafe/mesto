@@ -30,6 +30,8 @@ interface UI {
     radio: string;
     input: string;
     bar: string;
+    border: string;
+    track: string;
 }
 
 const LIGHT: UI = {
@@ -42,6 +44,8 @@ const LIGHT: UI = {
     radio: 'border-zinc-300',
     input: 'bg-white border-zinc-300 text-zinc-900 placeholder-zinc-400',
     bar: 'bg-white/90 border-zinc-200',
+    border: 'border-zinc-200',
+    track: 'bg-zinc-200',
 };
 
 const DARK: UI = {
@@ -54,6 +58,16 @@ const DARK: UI = {
     radio: 'border-zinc-600',
     input: 'bg-zinc-900 border-zinc-700 text-zinc-100 placeholder-zinc-500',
     bar: 'bg-zinc-900/90 border-zinc-800',
+    border: 'border-zinc-800',
+    track: 'bg-zinc-800',
+};
+
+const pluralReviews = (n: number) => {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'отзыв';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'отзыва';
+    return 'отзывов';
 };
 
 const todayInTz = (tz: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(new Date());
@@ -238,6 +252,18 @@ export const PublicBookingPage = ({ business }: Props) => {
                                 {business.phone}
                             </a>
                         )}
+                        {business.reviews.summary.count > 0 && (
+                            <div className="mt-1.5 flex items-center gap-1.5 text-sm">
+                                <Stars value={business.reviews.summary.average} accent={accent} />
+                                <span className="font-semibold">
+                                    {business.reviews.summary.average.toFixed(1)}
+                                </span>
+                                <span className={ui.sub}>
+                                    · {business.reviews.summary.count}{' '}
+                                    {pluralReviews(business.reviews.summary.count)}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </header>
 
@@ -286,16 +312,37 @@ export const PublicBookingPage = ({ business }: Props) => {
                                     ui={ui}
                                     onClick={() => setEmployeeId(ANY)}
                                 />
-                                {business.team.map((t) => (
-                                    <Chip
-                                        key={t.id}
-                                        label={t.name}
-                                        active={employeeId === t.id}
-                                        accent={accent}
-                                        ui={ui}
-                                        onClick={() => setEmployeeId(t.id)}
-                                    />
-                                ))}
+                                {business.team.map((t) => {
+                                    const rating = business.reviews.employeeRatings[t.id];
+                                    const active = employeeId === t.id;
+                                    return (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => setEmployeeId(t.id)}
+                                            className={clsx(
+                                                'flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition',
+                                                active ? 'text-white' : ui.pill,
+                                            )}
+                                            style={
+                                                active
+                                                    ? { backgroundColor: accent, borderColor: accent }
+                                                    : undefined
+                                            }
+                                        >
+                                            <span>{t.name}</span>
+                                            {rating && (
+                                                <span
+                                                    className={clsx(
+                                                        'text-xs',
+                                                        active ? 'text-white/90' : ui.sub,
+                                                    )}
+                                                >
+                                                    ★ {rating.average.toFixed(1)}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </Card>
 
@@ -350,6 +397,14 @@ export const PublicBookingPage = ({ business }: Props) => {
                                 <LInput label="Email (необязательно)" type="email" autoComplete="email" value={email} onChange={setEmail} accent={accent} ui={ui} />
                             </div>
                         </Card>
+
+                        {/* Отзывы */}
+                        <ReviewsCard
+                            slug={business.slug}
+                            data={business.reviews}
+                            accent={accent}
+                            ui={ui}
+                        />
                     </>
                 )}
             </div>
@@ -484,5 +539,210 @@ function LInput({
                 style={{ ['--tw-ring-color' as string]: accent } as React.CSSProperties}
             />
         </label>
+    );
+}
+
+const STAR_MUTED = 'rgba(120,120,120,0.35)';
+
+function Stars({ value, accent }: { value: number; accent: string }) {
+    const full = Math.round(value);
+    return (
+        <span className="inline-flex text-sm leading-none" aria-label={`${value} из 5`}>
+            {[1, 2, 3, 4, 5].map((i) => (
+                <span key={i} style={{ color: i <= full ? accent : STAR_MUTED }}>
+                    ★
+                </span>
+            ))}
+        </span>
+    );
+}
+
+function StarPicker({
+    value,
+    onChange,
+    accent,
+}: {
+    value: number;
+    onChange: (n: number) => void;
+    accent: string;
+}) {
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <button
+                    key={i}
+                    type="button"
+                    aria-label={`Оценка ${i}`}
+                    onClick={() => onChange(i)}
+                    className="text-2xl leading-none"
+                    style={{ color: i <= value ? accent : STAR_MUTED }}
+                >
+                    ★
+                </button>
+            ))}
+        </div>
+    );
+}
+
+function ReviewsCard({
+    slug,
+    data,
+    accent,
+    ui,
+}: {
+    slug: string;
+    data: PublicBusiness['reviews'];
+    accent: string;
+    ui: UI;
+}) {
+    const alert = useNotification();
+    const [open, setOpen] = useState(false);
+    const [phone, setPhone] = useState('');
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState('');
+    const [sending, setSending] = useState(false);
+
+    const { summary, recent } = data;
+
+    const submit = async () => {
+        if (!phone.trim()) {
+            alert('error', 'Укажите телефон');
+            return;
+        }
+        setSending(true);
+        try {
+            const res = await fetch('/api/public/reviews', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ slug, phone, rating, comment: comment.trim() || null }),
+            });
+            const d = await res.json();
+            if (!res.ok) {
+                alert('error', d.error ?? 'Не удалось отправить отзыв');
+                return;
+            }
+            alert('success', 'Спасибо за отзыв!');
+            setOpen(false);
+            setPhone('');
+            setComment('');
+            setRating(5);
+        } catch {
+            alert('error', 'Не удалось отправить отзыв');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <Card ui={ui} title="Отзывы" count={summary.count || undefined}>
+            {summary.count === 0 ? (
+                <p className={clsx('text-sm', ui.sub)}>
+                    Пока нет отзывов — оставьте первый после визита.
+                </p>
+            ) : (
+                <div className="space-y-5">
+                    <div className="flex items-center gap-5">
+                        <div className="text-center">
+                            <div className="text-4xl font-bold leading-none">
+                                {summary.average.toFixed(1)}
+                            </div>
+                            <div className="mt-1">
+                                <Stars value={summary.average} accent={accent} />
+                            </div>
+                            <div className={clsx('mt-1 text-xs', ui.sub)}>
+                                {summary.count} {pluralReviews(summary.count)}
+                            </div>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            {[5, 4, 3, 2, 1].map((s) => {
+                                const c = summary.distribution[s as 1 | 2 | 3 | 4 | 5];
+                                const pct = summary.count ? Math.round((c / summary.count) * 100) : 0;
+                                return (
+                                    <div key={s} className="flex items-center gap-2">
+                                        <span className={clsx('w-3 text-right text-xs', ui.sub)}>{s}</span>
+                                        <div className={clsx('h-1.5 flex-1 overflow-hidden rounded-full', ui.track)}>
+                                            <div
+                                                className="h-full rounded-full"
+                                                style={{ width: `${pct}%`, backgroundColor: accent }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        {recent.map((r) => (
+                            <div key={r.id} className={clsx('border-t pt-3', ui.border)}>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium">{r.authorName}</span>
+                                    <Stars value={r.rating} accent={accent} />
+                                </div>
+                                {r.employeeName && (
+                                    <p className={clsx('text-xs', ui.sub)}>Специалист: {r.employeeName}</p>
+                                )}
+                                {r.comment && <p className="mt-1 text-sm">{r.comment}</p>}
+                                <p className={clsx('mt-1 text-xs', ui.sub)}>
+                                    {new Date(r.createdAt).toLocaleDateString('ru-RU')}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div className={clsx('mt-4 border-t pt-4', ui.border)}>
+                {!open ? (
+                    <button
+                        type="button"
+                        onClick={() => setOpen(true)}
+                        className="text-sm font-medium"
+                        style={{ color: accent }}
+                    >
+                        Оставить отзыв
+                    </button>
+                ) : (
+                    <div className="space-y-3">
+                        <p className={clsx('text-xs', ui.sub)}>Доступно после завершённого визита.</p>
+                        <StarPicker value={rating} onChange={setRating} accent={accent} />
+                        <LInput label="Телефон" type="tel" value={phone} onChange={setPhone} accent={accent} ui={ui} />
+                        <label className="block">
+                            <span className={clsx('mb-1 block text-sm', ui.sub)}>
+                                Комментарий (необязательно)
+                            </span>
+                            <textarea
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                rows={3}
+                                className={clsx(
+                                    'w-full rounded-xl border px-3 py-2.5 outline-none transition focus:ring-2',
+                                    ui.input,
+                                )}
+                                style={{ ['--tw-ring-color' as string]: accent } as React.CSSProperties}
+                            />
+                        </label>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={submit}
+                                disabled={sending}
+                                className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                                style={{ backgroundColor: accent }}
+                            >
+                                {sending ? 'Отправка…' : 'Отправить'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setOpen(false)}
+                                className={clsx('rounded-xl px-4 py-2 text-sm', ui.sub)}
+                            >
+                                Отмена
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Card>
     );
 }

@@ -78,6 +78,13 @@
       "when": 1780950296139,
       "tag": "0010_wealthy_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780950955035,
+      "tag": "0011_wild_toxin",
+      "breakpoints": true
     }
   ]
 }
