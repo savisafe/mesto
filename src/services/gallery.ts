@@ -88,7 +88,8 @@ export async function removeGalleryPhoto(photoId: string): Promise<ServiceResult
 
     // Блоб удаляем best-effort: даже если не вышло, строку из БД убираем.
     try {
-        await del(photo.url);
+        // Явный токен — чтобы SDK не уходил в OIDC при наличии VERCEL_OIDC_TOKEN.
+        await del(photo.url, { token: process.env.BLOB_READ_WRITE_TOKEN });
     } catch {
         // игнорируем — осиротевший блоб не критичен
     }

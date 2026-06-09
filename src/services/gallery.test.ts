@@ -124,7 +124,7 @@ describe('removeGalleryPhoto', () => {
 
         const r = await removeGalleryPhoto(photo.id);
         expect(r.ok).toBe(true);
-        expect(mockDel).toHaveBeenCalledWith('https://x.blob/a.jpg');
+        expect(mockDel).toHaveBeenCalledWith('https://x.blob/a.jpg', expect.anything());
         expect(await getPublicGalleryPhotos(biz.id)).toHaveLength(0);
     });
 
