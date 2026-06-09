@@ -15,7 +15,7 @@ import { routes } from '@/routes/routes';
 
 const stats = [
     { label: 'Записей сегодня', value: '12' },
-    { label: 'Выручка за день', value: '₽48 200' },
+    { label: 'Выручка за день', value: '48 200' },
     { label: 'Загрузка', value: '87%' },
 ];
 
@@ -172,7 +172,7 @@ export const HeroSection = () => (
                     transition={{ delay: 0.75 }}
                 >
                     <Wallet size={16} className="text-pink-400" />
-                    +₽4 500 к выручке
+                    +4 500 к выручке
                 </motion.div>
                 <motion.div
                     className="absolute -right-3 top-2 hidden items-center gap-1 rounded-xl border border-purple-600/40 bg-purple-900/80 px-3 py-2 text-xs text-white shadow-lg backdrop-blur sm:flex"
