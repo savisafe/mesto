@@ -11,6 +11,7 @@ import {
 } from './availability';
 import { findOrCreateClient } from './external/clients';
 import { getBusinessReviews, type BusinessReviewsData } from './reviews';
+import { getPublicGalleryPhotos, type GalleryItem } from './gallery';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -38,6 +39,7 @@ export interface PublicBusiness {
     services: PublicService[];
     team: { id: string; name: string }[];
     reviews: BusinessReviewsData;
+    gallery: GalleryItem[];
 }
 
 // Резолвит бизнес по slug ТОЛЬКО если публичная запись включена, бизнес активен
@@ -77,6 +79,7 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
 
     const team = await getBusinessTeam(biz.id);
     const reviews = await getBusinessReviews(biz.id);
+    const gallery = await getPublicGalleryPhotos(biz.id);
 
     return {
         id: biz.id,
@@ -91,6 +94,7 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         services: svc,
         team,
         reviews,
+        gallery,
     };
 }
 

@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import clsx from 'clsx';
 import { Button } from '@/ui/button/Button';
 import { TextField } from '@/ui/form';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
+import { listGalleryAction, removeGalleryPhotoAction } from '@/actions/gallery';
+import type { GalleryItem } from '@/services/gallery';
 import { slugify } from '@/lib/slug';
 import { publicBusinessPath } from '@/routes/routes';
 
@@ -36,6 +39,8 @@ export default function PublicBookingSettings() {
     const [theme, setTheme] = useState<PublicTheme>('light');
     const [accentColor, setAccentColor] = useState('#7c3aed');
     const [saving, setSaving] = useState(false);
+    const [photos, setPhotos] = useState<GalleryItem[]>([]);
+    const [uploading, setUploading] = useState(false);
 
     // Синхронизируем форму, когда подгрузился/сменился текущий бизнес.
     useEffect(() => {
@@ -45,6 +50,45 @@ export default function PublicBookingSettings() {
         setTheme(business.publicTheme === 'dark' ? 'dark' : 'light');
         setAccentColor(business.publicAccentColor);
     }, [business]);
+
+    // Галерея «Примеры работ».
+    useEffect(() => {
+        if (!business) return;
+        listGalleryAction(business.id).then((r) => {
+            if (r.ok) setPhotos(r.data);
+        });
+    }, [business]);
+
+    const handleUploadPhoto = async (file: File) => {
+        if (!business) return;
+        setUploading(true);
+        try {
+            const fd = new FormData();
+            fd.append('businessId', business.id);
+            fd.append('file', file);
+            const res = await fetch('/api/gallery', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!res.ok) {
+                alert('error', data.error ?? 'Не удалось загрузить фото');
+                return;
+            }
+            setPhotos((prev) => [...prev, data.photo]);
+            alert('success', 'Фото добавлено');
+        } catch {
+            alert('error', 'Не удалось загрузить фото');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDeletePhoto = async (id: string) => {
+        const res = await removeGalleryPhotoAction(id);
+        if (res.ok) {
+            setPhotos((prev) => prev.filter((p) => p.id !== id));
+        } else {
+            alert('error', res.error);
+        }
+    };
 
     if (!business) {
         return (
@@ -202,6 +246,45 @@ export default function PublicBookingSettings() {
             <Button onClick={handleSave} loading={saving}>
                 Сохранить
             </Button>
+
+            <div className="space-y-3 border-t border-purple-700/40 pt-4">
+                <p className="text-sm font-medium text-purple-200">Примеры работ</p>
+                {photos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {photos.map((p) => (
+                            <div
+                                key={p.id}
+                                className="relative aspect-square overflow-hidden rounded-lg"
+                            >
+                                <Image src={p.url} alt="Пример работы" fill sizes="120px" className="object-cover" />
+                                <button
+                                    type="button"
+                                    aria-label="Удалить фото"
+                                    onClick={() => handleDeletePhoto(p.id)}
+                                    className="absolute right-1 top-1 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-purple-700 px-3 py-2 text-sm text-purple-200 hover:bg-purple-800/40">
+                    {uploading ? 'Загрузка…' : 'Добавить фото'}
+                    <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadPhoto(file);
+                            e.target.value = '';
+                        }}
+                    />
+                </label>
+                <p className="text-xs text-purple-400">JPG, PNG или WebP, до 4 МБ, не больше 30 фото.</p>
+            </div>
         </section>
     );
 }

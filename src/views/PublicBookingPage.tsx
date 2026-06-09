@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import clsx from 'clsx';
 import { useNotification } from '@/contexts/NotificationContext';
 import { formatMoney, formatDuration, formatTime, formatDayLabel } from '@/lib/format';
@@ -345,6 +346,28 @@ export const PublicBookingPage = ({ business }: Props) => {
                                 })}
                             </div>
                         </Card>
+
+                        {/* Примеры работ */}
+                        {business.gallery.length > 0 && (
+                            <Card ui={ui} title="Примеры работ" count={business.gallery.length}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {business.gallery.map((p) => (
+                                        <div
+                                            key={p.id}
+                                            className="relative aspect-[4/3] overflow-hidden rounded-xl"
+                                        >
+                                            <Image
+                                                src={p.url}
+                                                alt="Пример работы"
+                                                fill
+                                                sizes="(max-width: 480px) 50vw, 240px"
+                                                className="object-cover"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </Card>
+                        )}
 
                         {/* Дата и время */}
                         <Card ui={ui} title="Дата и время">
