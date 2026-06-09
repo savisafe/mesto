@@ -2,10 +2,16 @@ import 'server-only';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/db';
 import { appointments, businesses, clients, reviews, users } from '@/db/schema';
+import { getCurrentUser } from '@/lib/auth';
+import { checkBusinessAccess } from './_access';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
     | { ok: false; error: string; code?: string };
+
+const UNAUTHORIZED = { ok: false as const, error: 'Не авторизован', code: 'UNAUTHORIZED' as const };
+const FORBIDDEN = { ok: false as const, error: 'Нет доступа', code: 'FORBIDDEN' as const };
+const NOT_FOUND = { ok: false as const, error: 'Отзыв не найден', code: 'NOT_FOUND' as const };
 
 export type Stars = 1 | 2 | 3 | 4 | 5;
 
@@ -93,6 +99,76 @@ export async function getBusinessReviews(
         employeeRatings,
         recent,
     };
+}
+
+// --- Модерация (кабинет владельца) ---
+
+export interface OwnerReview {
+    id: string;
+    authorName: string;
+    rating: number;
+    comment: string | null;
+    createdAt: string;
+    employeeName: string | null;
+    isHidden: boolean;
+}
+
+/** Все отзывы бизнеса (включая скрытые) — для модерации в кабинете. */
+export async function listBusinessReviews(
+    businessId: string,
+): Promise<ServiceResult<OwnerReview[]>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+    const access = await checkBusinessAccess(businessId, user.id);
+    if (!access) return FORBIDDEN;
+
+    const rows = await db
+        .select({
+            id: reviews.id,
+            authorName: reviews.authorName,
+            rating: reviews.rating,
+            comment: reviews.comment,
+            createdAt: reviews.createdAt,
+            isHidden: reviews.isHidden,
+            employeeName: users.name,
+        })
+        .from(reviews)
+        .leftJoin(users, eq(reviews.employeeUserId, users.id))
+        .where(eq(reviews.businessId, businessId))
+        .orderBy(desc(reviews.createdAt));
+
+    return {
+        ok: true,
+        data: rows.map((r) => ({
+            id: r.id,
+            authorName: r.authorName,
+            rating: r.rating,
+            comment: r.comment,
+            createdAt: r.createdAt.toISOString(),
+            employeeName: r.employeeName,
+            isHidden: r.isHidden,
+        })),
+    };
+}
+
+/** Скрыть/показать отзыв на публичной странице. */
+export async function setReviewHidden(
+    reviewId: string,
+    hidden: boolean,
+): Promise<ServiceResult<{ id: string; isHidden: boolean }>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+    const [existing] = await db
+        .select({ businessId: reviews.businessId })
+        .from(reviews)
+        .where(eq(reviews.id, reviewId))
+        .limit(1);
+    if (!existing) return NOT_FOUND;
+    const access = await checkBusinessAccess(existing.businessId, user.id);
+    if (!access) return FORBIDDEN;
+
+    await db.update(reviews).set({ isHidden: hidden }).where(eq(reviews.id, reviewId));
+    return { ok: true, data: { id: reviewId, isHidden: hidden } };
 }
 
 export interface CreatePublicReviewInput {

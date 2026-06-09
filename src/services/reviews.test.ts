@@ -6,9 +6,19 @@ vi.mock('@/db', async () => {
     return { db };
 });
 
+vi.mock('@/lib/auth', () => ({ getCurrentUser: vi.fn() }));
+
 import { db } from '@/db';
 import * as schema from '@/db/schema';
-import { createPublicReview, getBusinessReviews } from './reviews';
+import { getCurrentUser } from '@/lib/auth';
+import {
+    createPublicReview,
+    getBusinessReviews,
+    listBusinessReviews,
+    setReviewHidden,
+} from './reviews';
+
+const mockGetCurrentUser = vi.mocked(getCurrentUser);
 
 async function makeUser(email: string) {
     const [u] = await db
@@ -57,7 +67,11 @@ beforeEach(async () => {
     await db.delete(schema.clients);
     await db.delete(schema.businesses);
     await db.delete(schema.users);
+    mockGetCurrentUser.mockReset();
+    mockGetCurrentUser.mockResolvedValue(null);
 });
+
+const asUser = (id: string) => ({ id }) as unknown as schema.PublicUser;
 
 describe('createPublicReview', () => {
     it('успех после завершённого визита', async () => {
@@ -168,5 +182,73 @@ describe('getBusinessReviews', () => {
         const data = await getBusinessReviews(biz.id);
         expect(data.summary.count).toBe(0);
         expect(data.recent).toHaveLength(0);
+    });
+});
+
+describe('модерация отзывов', () => {
+    it('listBusinessReviews — владелец видит все отзывы, включая скрытые', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeCompletedAppointment(biz.id, client.id);
+        const created = await createPublicReview({ slug: 'studio', phone: client.phone, rating: 5 });
+        if (!created.ok) throw new Error('setup failed');
+        await db.update(schema.reviews).set({ isHidden: true });
+
+        mockGetCurrentUser.mockResolvedValue(asUser(owner.id));
+        const r = await listBusinessReviews(biz.id);
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        expect(r.data).toHaveLength(1);
+        expect(r.data[0].isHidden).toBe(true);
+    });
+
+    it('listBusinessReviews — FORBIDDEN для постороннего', async () => {
+        const owner = await makeUser('o@test.local');
+        const stranger = await makeUser('s@test.local');
+        const biz = await makeBusiness(owner.id);
+
+        mockGetCurrentUser.mockResolvedValue(asUser(stranger.id));
+        const r = await listBusinessReviews(biz.id);
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('FORBIDDEN');
+    });
+
+    it('setReviewHidden — владелец скрывает и показывает отзыв', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeCompletedAppointment(biz.id, client.id);
+        const created = await createPublicReview({ slug: 'studio', phone: client.phone, rating: 5 });
+        if (!created.ok) throw new Error('setup failed');
+
+        mockGetCurrentUser.mockResolvedValue(asUser(owner.id));
+        const hidden = await setReviewHidden(created.data.id, true);
+        expect(hidden.ok).toBe(true);
+
+        const after = await getBusinessReviews(biz.id);
+        expect(after.summary.count).toBe(0);
+
+        const shown = await setReviewHidden(created.data.id, false);
+        expect(shown.ok).toBe(true);
+        const after2 = await getBusinessReviews(biz.id);
+        expect(after2.summary.count).toBe(1);
+    });
+
+    it('setReviewHidden — FORBIDDEN для постороннего', async () => {
+        const owner = await makeUser('o@test.local');
+        const stranger = await makeUser('s@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id);
+        await makeCompletedAppointment(biz.id, client.id);
+        const created = await createPublicReview({ slug: 'studio', phone: client.phone, rating: 5 });
+        if (!created.ok) throw new Error('setup failed');
+
+        mockGetCurrentUser.mockResolvedValue(asUser(stranger.id));
+        const r = await setReviewHidden(created.data.id, true);
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('FORBIDDEN');
     });
 });
