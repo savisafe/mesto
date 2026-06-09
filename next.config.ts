@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
     env: {
         NEXT_PUBLIC_BUILD_ID: buildId,
     },
+    images: {
+        remotePatterns: [
+            { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
+        ],
+    },
 };
 
 export default nextConfig;
