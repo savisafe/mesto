@@ -58,8 +58,16 @@ export async function POST(req: NextRequest): Promise<Response> {
     try {
         const blob = await put(key, file, { access: 'public', contentType: file.type });
         url = blob.url;
-    } catch {
-        return NextResponse.json({ error: 'Не удалось загрузить файл' }, { status: 500 });
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : 'unknown';
+        console.error('[gallery] blob put failed:', detail);
+        return NextResponse.json(
+            {
+                error: 'Не удалось загрузить файл',
+                ...(process.env.NODE_ENV !== 'production' ? { detail } : {}),
+            },
+            { status: 500 },
+        );
     }
 
     const result = await addGalleryPhoto(businessId, url);
