@@ -63,6 +63,26 @@ Then point the widget at it:
 The server returns only public post fields — tokens and account internals never
 leave the backend (`toFeedResponse` is the boundary).
 
+## Connecting an Instagram account (OAuth)
+
+The connect flow is implemented (`InstagramOAuth` + `handleConnectStart` /
+`handleConnectCallback`) and tested against mocked Graph endpoints. To run it
+against real Instagram you need a **Meta app** (Instagram Login product) and
+these server-only env values:
+
+| Env | Purpose |
+| --- | --- |
+| `INSTAGRID_IG_CLIENT_ID` | Meta app client id |
+| `INSTAGRID_IG_CLIENT_SECRET` | Meta app secret |
+| `INSTAGRID_REDIRECT_URI` | OAuth callback, e.g. `https://api.example.com/callback` |
+| `INSTAGRID_STATE_SECRET` | HMAC secret for the OAuth `state` |
+| `INSTAGRID_TOKEN_KEY` | base64 32-byte key for token encryption at rest |
+
+Flow: `GET /connect?feed=<id>` → Instagram authorize → `GET /callback` exchanges
+the code for a long-lived token, encrypts it, and runs the first sync. The
+account requires an Instagram **Business/Creator** account; going live for other
+users needs Meta app review.
+
 ## Roadmap
 
 1. **Contract + client** — types and a working `<ig-grid>` rendering from a

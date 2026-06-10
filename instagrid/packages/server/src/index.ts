@@ -14,6 +14,17 @@ export {
 } from './accounts';
 export { MockProvider } from './providers/mock';
 export { InstagramProvider, normalizeMedia, type IgMedia } from './providers/instagram';
+export {
+    InstagramOAuth,
+    type InstagramOAuthConfig,
+    type ConnectResult,
+} from './oauth/instagram-oauth';
+export {
+    handleConnectStart,
+    handleConnectCallback,
+    type ConnectDeps,
+} from './oauth/connect-handler';
+export { createState, signState, verifyState, type StatePayload } from './oauth/state';
 export type {
     FeedRecord,
     FeedStore,
