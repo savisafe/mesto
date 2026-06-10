@@ -369,6 +369,22 @@ export const PublicBookingPage = ({ business }: Props) => {
                             </Card>
                         )}
 
+                        {/* Instagram-виджет студии */}
+                        {business.instagramWidgetUrl && (
+                            <Card ui={ui} title="Мы в Instagram">
+                                <div className="relative w-full overflow-hidden rounded-xl aspect-square">
+                                    <iframe
+                                        src={business.instagramWidgetUrl}
+                                        title="Instagram"
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        className="absolute inset-0 h-full w-full border-0"
+                                        scrolling="no"
+                                    />
+                                </div>
+                            </Card>
+                        )}
+
                         {/* Дата и время */}
                         <Card ui={ui} title="Дата и время">
                             {loadingSlots ? (

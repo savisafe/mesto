@@ -10,6 +10,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
 import { slugify } from '@/lib/slug';
+import { normalizeInstagramWidgetUrl } from '@/lib/instagram-widget';
 
 export { ARCHIVE_RETENTION_DAYS };
 
@@ -37,6 +38,8 @@ export interface UpdateBusinessInput {
     // Оформление публичной страницы.
     publicTheme?: PublicTheme;
     publicAccentColor?: string;
+    // Embed-код или URL Instagram-виджета (SnapWidget/LightWidget); '' очищает.
+    instagramWidgetUrl?: string;
 }
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
@@ -206,6 +209,22 @@ export async function updateBusiness(
             return { ok: false, error: 'Некорректный цвет (нужен #rrggbb)', code: 'INVALID_COLOR' };
         }
         updates.publicAccentColor = color;
+    }
+    if (input.instagramWidgetUrl !== undefined) {
+        const raw = input.instagramWidgetUrl.trim();
+        if (!raw) {
+            updates.instagramWidgetUrl = null;
+        } else {
+            const normalized = normalizeInstagramWidgetUrl(raw);
+            if (!normalized) {
+                return {
+                    ok: false,
+                    error: 'Поддерживаются виджеты SnapWidget или LightWidget — вставьте их код встраивания',
+                    code: 'INVALID_WIDGET',
+                };
+            }
+            updates.instagramWidgetUrl = normalized;
+        }
     }
 
     // Нельзя включить публичную запись без slug (страница не открылась бы).

@@ -56,17 +56,31 @@ export async function POST(req: NextRequest): Promise<Response> {
 
     let url: string;
     try {
-        const blob = await put(key, file, { access: 'public', contentType: file.type });
+        const blob = await put(key, file, {
+            access: 'public',
+            contentType: file.type,
+            // Явный токен: иначе при наличии VERCEL_OIDC_TOKEN в окружении SDK
+            // пытается авторизоваться через OIDC (недоступен для development).
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
         url = blob.url;
-    } catch {
-        return NextResponse.json({ error: 'Не удалось загрузить файл' }, { status: 500 });
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : 'unknown';
+        console.error('[gallery] blob put failed:', detail);
+        return NextResponse.json(
+            {
+                error: 'Не удалось загрузить файл',
+                ...(process.env.NODE_ENV !== 'production' ? { detail } : {}),
+            },
+            { status: 500 },
+        );
     }
 
     const result = await addGalleryPhoto(businessId, url);
     if (!result.ok) {
         // Откатываем загруженный блоб, чтобы не оставить мусор.
         try {
-            await del(url);
+            await del(url, { token: process.env.BLOB_READ_WRITE_TOKEN });
         } catch {
             // игнорируем
         }

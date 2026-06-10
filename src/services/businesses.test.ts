@@ -252,6 +252,43 @@ describe('updateBusiness', () => {
         const result = await updateBusiness(biz.id, { name: '   ' });
         expect(result.ok).toBe(false);
     });
+
+    it('сохраняет Instagram-виджет с разрешённого хоста и чистит пустым значением', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id })
+            .returning();
+
+        await loginAs(owner);
+        const ok = await updateBusiness(biz.id, {
+            instagramWidgetUrl: '<iframe src="https://snapwidget.com/embed/42"></iframe>',
+        });
+        expect(ok.ok).toBe(true);
+        if (!ok.ok) return;
+        expect(ok.data.instagramWidgetUrl).toBe('https://snapwidget.com/embed/42');
+
+        const cleared = await updateBusiness(biz.id, { instagramWidgetUrl: '' });
+        expect(cleared.ok).toBe(true);
+        if (!cleared.ok) return;
+        expect(cleared.data.instagramWidgetUrl).toBeNull();
+    });
+
+    it('INVALID_WIDGET для чужого хоста', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id })
+            .returning();
+
+        await loginAs(owner);
+        const result = await updateBusiness(biz.id, {
+            instagramWidgetUrl: 'https://evil.example.com/embed/1',
+        });
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.code).toBe('INVALID_WIDGET');
+    });
 });
 
 describe('archiveBusiness', () => {

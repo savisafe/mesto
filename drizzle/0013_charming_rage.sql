@@ -1,0 +1,1 @@
+ALTER TABLE "businesses" ADD COLUMN "instagram_widget_url" text;
