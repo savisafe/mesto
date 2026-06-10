@@ -289,6 +289,25 @@ describe('updateBusiness', () => {
         if (result.ok) return;
         expect(result.code).toBe('INVALID_WIDGET');
     });
+
+    it('сохраняет Instagram-ник (нормализует) и валидирует', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const [biz] = await db
+            .insert(schema.businesses)
+            .values({ name: 'X', ownerId: owner.id })
+            .returning();
+
+        await loginAs(owner);
+        const ok = await updateBusiness(biz.id, { instagramUsername: '@Pet_Salon' });
+        expect(ok.ok).toBe(true);
+        if (!ok.ok) return;
+        expect(ok.data.instagramUsername).toBe('pet_salon');
+
+        const bad = await updateBusiness(biz.id, { instagramUsername: 'has spaces' });
+        expect(bad.ok).toBe(false);
+        if (bad.ok) return;
+        expect(bad.code).toBe('INVALID_INSTAGRAM');
+    });
 });
 
 describe('archiveBusiness', () => {

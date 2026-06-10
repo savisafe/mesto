@@ -19,9 +19,11 @@ export const businesses = pgTable(
         // Оформление публичной страницы: тема ('light' | 'dark') и акцентный цвет (#rrggbb).
         publicTheme: text('public_theme').notNull().default('light'),
         publicAccentColor: text('public_accent_color').notNull().default('#7c3aed'),
-        // URL встраивания Instagram-виджета (SnapWidget/LightWidget). null = не задан.
-        // Хранится только провайдерский iframe-src с разрешённого хоста (см. lib/instagram-widget).
+        // Instagram студии. Виджет SnapWidget/LightWidget рисует сетку постов;
+        // ник (без @) — для заголовка-ссылки/кнопки. Оба null = блок не показываем.
+        // Виджет хранит провайдерский iframe-src с allowlist-хоста (см. lib/instagram).
         instagramWidgetUrl: text('instagram_widget_url'),
+        instagramUsername: text('instagram_username'),
         // IANA-зона бизнеса. Все «локальные» часы графика и слоты резолвятся в ней.
         timezone: text('timezone').notNull().default('Asia/Almaty'),
         ownerId: uuid('owner_id')
