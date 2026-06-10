@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 import { Button } from '@/ui/button/Button';
-import { TextField } from '@/ui/form';
+import { TextField, Field, inputClasses } from '@/ui/form';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { listGalleryAction, removeGalleryPhotoAction } from '@/actions/gallery';
@@ -38,6 +38,7 @@ export default function PublicBookingSettings() {
     const [enabled, setEnabled] = useState(false);
     const [theme, setTheme] = useState<PublicTheme>('light');
     const [accentColor, setAccentColor] = useState('#7c3aed');
+    const [instagramWidget, setInstagramWidget] = useState('');
     const [saving, setSaving] = useState(false);
     const [photos, setPhotos] = useState<GalleryItem[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -49,6 +50,7 @@ export default function PublicBookingSettings() {
         setEnabled(business.publicBookingEnabled);
         setTheme(business.publicTheme === 'dark' ? 'dark' : 'light');
         setAccentColor(business.publicAccentColor);
+        setInstagramWidget(business.instagramWidgetUrl ?? '');
     }, [business]);
 
     // Галерея «Примеры работ».
@@ -117,6 +119,7 @@ export default function PublicBookingSettings() {
                 publicBookingEnabled: enabled,
                 publicTheme: theme,
                 publicAccentColor: accentColor,
+                instagramWidgetUrl: instagramWidget,
             });
             if (result.success) {
                 alert('success', 'Сохранено');
@@ -241,6 +244,22 @@ export default function PublicBookingSettings() {
                         />
                     </label>
                 </div>
+            </div>
+
+            <div className="space-y-2 border-t border-purple-700/40 pt-4">
+                <p className="text-sm font-medium text-purple-200">Instagram-виджет</p>
+                <Field
+                    inline
+                    hint="Создайте виджет на snapwidget.com (бесплатно) и вставьте код встраивания или ссылку. Покажем сетку постов на странице."
+                >
+                    <textarea
+                        value={instagramWidget}
+                        onChange={(e) => setInstagramWidget(e.target.value)}
+                        placeholder='<iframe src="https://snapwidget.com/embed/..."></iframe>'
+                        rows={3}
+                        className={clsx(inputClasses, 'resize-y font-mono text-xs')}
+                    />
+                </Field>
             </div>
 
             <Button onClick={handleSave} loading={saving}>
