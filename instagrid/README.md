@@ -44,7 +44,7 @@ instead of a backend:
 | --- | --- | --- |
 | `@instagrid/core` | ✅ phase 1 | Types (`FeedItem`, `FeedResponse`, `FeedConfig`), config clamping, grid helpers, `FeedProvider` interface |
 | `@instagrid/widget` | ✅ phase 1 | `<ig-grid>` Web Component (vanilla, zero-deps) |
-| `@instagrid/server` | ✅ phase 2 | Reference backend: public `GET /feeds/:id` (CORS, cache, rate-limit). OAuth + sync land in phase 3 |
+| `@instagrid/server` | ✅ phase 2–3 | Public `GET /feeds/:id` + sync pipeline, providers (`MockProvider`, real `InstagramProvider`), token encryption. OAuth connect lands in phase 4 |
 | `@instagrid/react` | ⏳ | Thin React wrapper |
 
 ### Run the reference API locally

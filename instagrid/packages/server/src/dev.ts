@@ -5,22 +5,25 @@ import type { FeedResponse } from '@instagrid/core';
 import { MemoryFeedStore } from './store';
 import { RateLimiter } from './rate-limit';
 import { createNodeServer } from './node';
-import type { FeedRecord } from './types';
+import { MockProvider } from './providers/mock';
+import { syncFeed } from './sync';
 
-// Seed one feed ("demo") from the shared fixture so the widget can hit a real
-// endpoint locally: <ig-grid endpoint="http://localhost:8787" feed="demo">.
+// End-to-end demo without Meta: a mock provider feeds the sync pipeline, which
+// populates the store the public API reads from.
+//   <ig-grid endpoint="http://localhost:8787" feed="demo"></ig-grid>
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(here, '../../../fixtures/feed.sample.json');
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as FeedResponse;
 
-const demo: FeedRecord = {
+const store = new MemoryFeedStore();
+await syncFeed({
     feedId: 'demo',
-    account: { provider: 'instagram', externalUserId: '0', username: fixture.username },
-    items: fixture.items,
-    updatedAt: fixture.updatedAt,
-};
+    account: { provider: 'mock', externalUserId: '0', username: fixture.username },
+    token: 'mock-token',
+    provider: new MockProvider(fixture.items),
+    store,
+});
 
-const store = new MemoryFeedStore([demo]);
 const rateLimiter = new RateLimiter({ capacity: 60, refillPerSec: 1 });
 const port = Number(process.env.PORT ?? 8787);
 

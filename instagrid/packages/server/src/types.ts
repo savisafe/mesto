@@ -21,6 +21,10 @@ export interface FeedStore {
     getFeed(feedId: string): FeedRecord | null | Promise<FeedRecord | null>;
 }
 
+export interface WritableFeedStore extends FeedStore {
+    upsert(record: FeedRecord): void | Promise<void>;
+}
+
 /** Framework-agnostic request shape the pure handler understands. */
 export interface FeedRequest {
     method: string;
