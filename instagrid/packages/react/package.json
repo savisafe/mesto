@@ -1,0 +1,28 @@
+{
+  "name": "@instagrid/react",
+  "version": "0.0.0",
+  "description": "React wrapper for the <ig-grid> instagrid widget",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19"
+  },
+  "dependencies": {
+    "@instagrid/widget": "0.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19"
+  }
+}

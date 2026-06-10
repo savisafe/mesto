@@ -3,6 +3,7 @@ export { MemoryFeedStore } from './store';
 export { RateLimiter, type RateLimiterOptions } from './rate-limit';
 export { createNodeServer } from './node';
 export { syncFeed, type SyncFeedOptions } from './sync';
+export { refreshDueTokens, type RefreshDeps, type RefreshReport } from './refresh';
 export { PassthroughImageStore, type ImageStore } from './image-store';
 export { Encryptor } from './crypto';
 export {

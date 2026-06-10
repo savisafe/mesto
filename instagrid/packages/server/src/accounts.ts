@@ -12,6 +12,8 @@ export interface StoredAccount {
 export interface AccountStore {
     get(externalUserId: string): StoredAccount | null;
     save(record: StoredAccount): void;
+    /** All stored accounts (used by the refresh job). */
+    all(): StoredAccount[];
 }
 
 export class MemoryAccountStore implements AccountStore {
@@ -23,6 +25,10 @@ export class MemoryAccountStore implements AccountStore {
 
     save(record: StoredAccount): void {
         this.records.set(record.account.externalUserId, record);
+    }
+
+    all(): StoredAccount[] {
+        return [...this.records.values()];
     }
 }
 
