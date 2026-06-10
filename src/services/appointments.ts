@@ -353,6 +353,38 @@ export async function completeAppointment(id: string): Promise<ServiceResult<{ i
     return setStatus(id, 'completed');
 }
 
+export async function noShowAppointment(id: string): Promise<ServiceResult<{ id: string }>> {
+    return setStatus(id, 'no_show');
+}
+
+/**
+ * Записи, которые уже прошли (endsAt в прошлом), но всё ещё в статусе `scheduled`.
+ * Их статус не подтверждён — мы не знаем, состоялся ли визит. Используется для
+ * напоминания «закройте записи за день» на странице финансов.
+ */
+export async function listPendingConfirmations(
+    businessId: string,
+): Promise<ServiceResult<AppointmentDetail[]>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+    const access = await checkBusinessAccess(businessId, user.id);
+    if (!access) return FORBIDDEN;
+
+    const rows = await db
+        .select()
+        .from(appointments)
+        .where(
+            and(
+                eq(appointments.businessId, businessId),
+                eq(appointments.status, 'scheduled'),
+                lt(appointments.endsAt, new Date()),
+            ),
+        )
+        .orderBy(asc(appointments.startsAt));
+
+    return { ok: true, data: await loadDetails(rows) };
+}
+
 async function setStatus(
     id: string,
     status: AppointmentStatus,

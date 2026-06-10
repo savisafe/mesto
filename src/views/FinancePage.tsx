@@ -1,181 +1,168 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { LayoutPage } from '@/ui/layouts/LayoutPage';
+import { SelectField } from '@/ui/form';
+import Spinner from '@/ui/spinner/Spinner';
+import { useAccess } from '@/hooks/useAccess';
+import { useBusiness } from '@/contexts/BusinessContext';
+import { useNotification } from '@/contexts/NotificationContext';
+import { getFinanceAnalyticsAction } from '@/actions/finance';
+import { listPendingConfirmationsAction } from '@/actions/appointments';
+import { listMembersAction } from '@/actions/employees';
+import type { FinanceAnalytics, FinanceGranularity } from '@/services/finance';
+import type { AppointmentDetail } from '@/services/appointments';
+import type { Member } from '@/services/employees';
+import { PeriodSwitcher } from './finance/PeriodSwitcher';
+import { FinanceSummaryCards } from './finance/FinanceSummaryCards';
+import { FinanceCharts } from './finance/FinanceCharts';
+import { PendingConfirmations } from './finance/PendingConfirmations';
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    ArcElement
-} from 'chart.js';
-import { Line, Bar, Pie } from 'react-chartjs-2';
-
-// Регистрация компонентов Chart.js
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    BarElement,
-    ArcElement,
-    Title,
-    Tooltip,
-    Legend
-);
-
-interface Visit {
-    date: string;
-    client: string;
-    employee: string;
-    amount: number;
-    paid: boolean;
-}
-interface Expense {
-    date: string;
-    amount: number;
-}
-
-const employees = ['Все', 'Дарья', 'Виктория', 'Елена'];
-
-// Пример данных
-const initialVisits: Visit[] = [
-    { date: '2025-04-13', client: 'Ольга', employee: 'Дарья', amount: 6000, paid: true },
-    { date: '2025-04-13', client: 'Ирина', employee: 'Елена', amount: 3500, paid: false },
-    { date: '2025-04-14', client: 'Екатерина', employee: 'Елена', amount: 4500, paid: true },
-    { date: '2025-04-15', client: 'Алина', employee: 'Дарья', amount: 5000, paid: true },
-    { date: '2025-04-15', client: 'Мария', employee: 'Виктория', amount: 4000, paid: false }
-];
-const initialExpenses: Expense[] = [
-    { date: '2025-04-13', amount: 2000 },
-    { date: '2025-04-14', amount: 1500 },
-    { date: '2025-04-15', amount: 2500 }
-];
+    presetRange,
+    formatRangeLabel,
+    toEmployeeFilter,
+    EMPLOYEE_ALL,
+    EMPLOYEE_NONE,
+    type DateRange,
+} from './finance/financeHelpers';
 
 export default function FinancePage() {
-    const [visits] = useState<Visit[]>(initialVisits);
-    const [expenses] = useState<Expense[]>(initialExpenses);
-    const [filterEmployee, setFilterEmployee] = useState('Все');
-    const [fromDate, setFromDate] = useState('2025-04-13');
-    const [toDate, setToDate] = useState('2025-04-15');
+    const access = useAccess();
+    const { currentBusiness, businessesData } = useBusiness();
+    const alert = useNotification();
 
-    // Фильтрация визитов по сотруднику и дате
-    const filteredVisits = visits.filter(v =>
-        (filterEmployee === 'Все' || v.employee === filterEmployee) &&
-        v.date >= fromDate && v.date <= toDate
-    );
-    // Фильтрация расходов по дате
-    const filteredExpenses = expenses.filter(e => e.date >= fromDate && e.date <= toDate);
+    const [granularity, setGranularity] = useState<FinanceGranularity>('month');
+    const [range, setRange] = useState<DateRange>(() => presetRange('month'));
+    const [employee, setEmployee] = useState<string>(EMPLOYEE_ALL);
+    const [members, setMembers] = useState<Member[]>([]);
 
-    // Выручка по дням
-    const revenueByDate: Record<string, number> = {};
-    filteredVisits.forEach(v => {
-        if (!revenueByDate[v.date]) revenueByDate[v.date] = 0;
-        if (v.paid) revenueByDate[v.date] += v.amount;
-    });
-    const dates = Array.from(new Set([...Object.keys(revenueByDate), ...filteredExpenses.map(e => e.date)])).sort();
-    const revenueData = dates.map(d => revenueByDate[d] || 0);
+    const [data, setData] = useState<FinanceAnalytics | null>(null);
+    const [pending, setPending] = useState<AppointmentDetail[]>([]);
+    const [timezone, setTimezone] = useState('UTC');
+    const [loading, setLoading] = useState(false);
 
-    // Расходы по дням
-    const expenseByDate: Record<string, number> = {};
-    filteredExpenses.forEach(e => {
-        expenseByDate[e.date] = (expenseByDate[e.date] || 0) + e.amount;
-    });
-    const expenseData = dates.map(d => expenseByDate[d] || 0);
+    const fetchMembers = useCallback(async () => {
+        if (!currentBusiness) return;
+        const r = await listMembersAction(currentBusiness);
+        if (r.ok) setMembers(r.data.members);
+    }, [currentBusiness]);
 
-    // Чистая прибыль = выручка - расходы
-    const netData = dates.map((d, i) => revenueData[i] - expenseData[i]);
+    const fetchAnalytics = useCallback(async () => {
+        if (!currentBusiness) return;
+        setLoading(true);
+        try {
+            const r = await getFinanceAnalyticsAction({
+                businessId: currentBusiness,
+                fromDate: range.fromDate,
+                toDate: range.toDate,
+                granularity,
+                employeeUserId: toEmployeeFilter(employee),
+            });
+            if (r.ok) setData(r.data);
+            else alert('error', r.error);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentBusiness, range, granularity, employee, alert]);
 
-    // Данные для графиков
-    const lineChartData = {
-        labels: dates,
-        datasets: [
-            { label: 'Выручка', data: revenueData, borderColor: '#8884d8', backgroundColor: 'rgba(136,132,216,0.2)' }
-        ]
+    const fetchPending = useCallback(async () => {
+        if (!currentBusiness) return;
+        const r = await listPendingConfirmationsAction(currentBusiness);
+        if (r.ok) setPending(r.data);
+    }, [currentBusiness]);
+
+    // Часовой пояс бизнеса нужен для подписей в напоминании — берём из контекста.
+    useEffect(() => {
+        const biz = businessesData.find((b) => b.id === currentBusiness);
+        if (biz?.timezone) setTimezone(biz.timezone);
+    }, [businessesData, currentBusiness]);
+
+    useEffect(() => {
+        fetchMembers();
+        fetchPending();
+    }, [fetchMembers, fetchPending]);
+
+    useEffect(() => {
+        fetchAnalytics();
+    }, [fetchAnalytics]);
+
+    const handlePeriodChange = (g: FinanceGranularity, r: DateRange) => {
+        setGranularity(g);
+        setRange(r);
     };
-    const barChartData = {
-        labels: dates,
-        datasets: [
-            { label: 'Расходы', data: expenseData, backgroundColor: 'rgba(255,99,132,0.5)' }
-        ]
-    };
-    const pieChartData = {
-        labels: ['Оплачено', 'Не оплачено'],
-        datasets: [
-            {
-                data: [
-                    filteredVisits.filter(v => v.paid).length,
-                    filteredVisits.filter(v => !v.paid).length
-                ],
-                backgroundColor: ['#82ca9d', '#ffcc00']
-            }
-        ]
-    };
-    const netChartData = {
-        labels: dates,
-        datasets: [
-            { label: 'Чистая прибыль', data: netData, borderColor: '#00C49F', backgroundColor: 'rgba(0,196,159,0.2)' }
-        ]
+
+    const handleResolved = () => {
+        fetchPending();
+        fetchAnalytics();
     };
 
-    // Кол-во клиентов за период
-    const clientCount = new Set(filteredVisits.map(v => v.client)).size;
+    if (access.status !== 'ok') {
+        return <LayoutPage>{access.component}</LayoutPage>;
+    }
 
-    // CSV экспорт/импорт аналогично прежнему
-    const handleExport = () => { /* ... */ };
-    const handleImport = () => { /* ... */ };
+    if (!currentBusiness) {
+        return (
+            <LayoutPage>
+                <div className="max-w-2xl mx-auto text-center mt-24">
+                    <h1 className="text-3xl font-bold text-white mb-4">Финансы</h1>
+                    <p className="text-purple-300">
+                        Сначала создайте бизнес в разделе{' '}
+                        <a href="/my-business" className="underline hover:text-white">
+                            «Мои бизнесы»
+                        </a>
+                    </p>
+                </div>
+            </LayoutPage>
+        );
+    }
 
     return (
-        <div className="min-h-screen p-6 bg-gradient-to-br from-purple-950 to-black text-white">
-            <h1 className="text-3xl font-bold mb-6">Финансы</h1>
+        <LayoutPage>
+            <div className="max-w-[1400px] mx-auto space-y-5">
+                <header className="flex flex-wrap items-end justify-between gap-4">
+                    <div>
+                        <p className="text-purple-300 text-sm mb-1">Аналитика</p>
+                        <h1 className="text-4xl font-bold text-white tracking-tight">Финансы</h1>
+                    </div>
+                    <p className="text-purple-300 text-sm">{formatRangeLabel(range)}</p>
+                </header>
 
-            {/* Фильтры */}
-            <div className="flex flex-wrap gap-4 items-center mb-6">
-                <select value={filterEmployee} onChange={e => setFilterEmployee(e.target.value)} className="px-3 py-2 rounded bg-purple-800 text-white">
-                    {employees.map(emp => <option key={emp} value={emp}>{emp}</option>)}
-                </select>
-                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="px-3 py-2 rounded bg-purple-800 text-white" />
-                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="px-3 py-2 rounded bg-purple-800 text-white" />
-                <button onClick={handleExport} className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl">Экспорт CSV</button>
-                <label className="bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-xl cursor-pointer">
-                    Импорт CSV<input type="file" accept="text/csv" onChange={handleImport} className="hidden" />
-                </label>
-            </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <PeriodSwitcher
+                        granularity={granularity}
+                        range={range}
+                        onChange={handlePeriodChange}
+                    />
+                    <div className="w-full sm:w-56">
+                        <SelectField
+                            value={employee}
+                            onChange={setEmployee}
+                            options={[
+                                { value: EMPLOYEE_ALL, label: 'Все сотрудники' },
+                                ...members.map((m) => ({ value: m.id, label: m.name })),
+                                { value: EMPLOYEE_NONE, label: 'Без сотрудника' },
+                            ]}
+                        />
+                    </div>
+                </div>
 
-            {/* Графики */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Линейный выручки и чистой прибыли */}
-                <div className="bg-purple-800 bg-opacity-30 p-4 rounded-xl border border-purple-700">
-                    <h2 className="mb-2">Выручка и чистая прибыль</h2>
-                    <Line data={{
-                        labels: dates,
-                        datasets: [
-                            lineChartData.datasets[0],
-                            netChartData.datasets[0]
-                        ]
-                    }} options={{ responsive: true }} />
-                </div>
-                {/* Столбчатый расходы */}
-                <div className="bg-purple-800 bg-opacity-30 p-4 rounded-xl border border-purple-700">
-                    <h2 className="mb-2">Расходы по дням</h2>
-                    <Bar data={barChartData} options={{ responsive: true }} />
-                </div>
+                <PendingConfirmations
+                    pending={pending}
+                    timezone={timezone}
+                    onResolved={handleResolved}
+                />
+
+                {loading && !data ? (
+                    <div className="flex justify-center py-24">
+                        <Spinner />
+                    </div>
+                ) : data ? (
+                    <div className={loading ? 'opacity-60 transition space-y-5' : 'transition space-y-5'}>
+                        <FinanceSummaryCards summary={data.summary} currency={data.currency} />
+                        <FinanceCharts data={data} />
+                    </div>
+                ) : null}
             </div>
-            {/* Круговая и статистика */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-purple-800 bg-opacity-30 p-4 rounded-xl border border-purple-700">
-                    <h2 className="mb-2">Статус оплаты визитов</h2>
-                    <Pie data={pieChartData} options={{ responsive: true }} />
-                </div>
-                <div className="bg-purple-800 bg-opacity-30 p-4 rounded-xl border border-purple-700">
-                    <h2 className="font-semibold mb-2">Кол-во клиентов</h2>
-                    <p>{clientCount}</p>
-                </div>
-            </div>
-        </div>
+        </LayoutPage>
     );
 }
