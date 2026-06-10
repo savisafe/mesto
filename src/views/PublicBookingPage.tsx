@@ -84,6 +84,14 @@ function initialsOf(name: string): string {
     return letters.join('') || '?';
 }
 
+const InstagramGlyph = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+);
+
 export const PublicBookingPage = ({ business }: Props) => {
     const alert = useNotification();
     const tz = business.timezone;
@@ -370,18 +378,45 @@ export const PublicBookingPage = ({ business }: Props) => {
                         )}
 
                         {/* Instagram-виджет студии */}
-                        {business.instagramWidgetUrl && (
-                            <Card ui={ui} title="Мы в Instagram">
-                                <div className="relative w-full overflow-hidden rounded-xl aspect-square">
-                                    <iframe
-                                        src={business.instagramWidgetUrl}
-                                        title="Instagram"
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                        className="absolute inset-0 h-full w-full border-0"
-                                        scrolling="no"
-                                    />
-                                </div>
+                        {(business.instagramWidgetUrl || business.instagramUsername) && (
+                            <Card ui={ui} title="Instagram">
+                                {business.instagramUsername && (
+                                    <a
+                                        href={`https://instagram.com/${business.instagramUsername}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium"
+                                        style={{ color: accent }}
+                                    >
+                                        <InstagramGlyph />@{business.instagramUsername}
+                                    </a>
+                                )}
+                                {business.instagramWidgetUrl ? (
+                                    <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+                                        <iframe
+                                            src={business.instagramWidgetUrl}
+                                            title="Instagram"
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                            className="absolute inset-0 h-full w-full border-0"
+                                            scrolling="no"
+                                        />
+                                    </div>
+                                ) : (
+                                    <a
+                                        href={`https://instagram.com/${business.instagramUsername}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                        style={{
+                                            background:
+                                                'linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)',
+                                        }}
+                                    >
+                                        <InstagramGlyph />
+                                        Открыть Instagram
+                                    </a>
+                                )}
                             </Card>
                         )}
 

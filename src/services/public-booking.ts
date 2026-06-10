@@ -38,6 +38,8 @@ export interface PublicBusiness {
     accentColor: string;
     /** Безопасный iframe-src Instagram-виджета (SnapWidget/LightWidget) или null. */
     instagramWidgetUrl: string | null;
+    /** Ник студии в Instagram (без @) или null. */
+    instagramUsername: string | null;
     services: PublicService[];
     team: { id: string; name: string }[];
     reviews: BusinessReviewsData;
@@ -94,6 +96,7 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         theme: biz.publicTheme === 'dark' ? 'dark' : 'light',
         accentColor: biz.publicAccentColor,
         instagramWidgetUrl: biz.instagramWidgetUrl,
+        instagramUsername: biz.instagramUsername,
         services: svc,
         team,
         reviews,

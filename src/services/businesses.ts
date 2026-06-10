@@ -10,7 +10,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
 import { slugify } from '@/lib/slug';
-import { normalizeInstagramWidgetUrl } from '@/lib/instagram-widget';
+import { normalizeInstagramWidgetUrl, normalizeInstagramUsername } from '@/lib/instagram';
 
 export { ARCHIVE_RETENTION_DAYS };
 
@@ -38,8 +38,10 @@ export interface UpdateBusinessInput {
     // Оформление публичной страницы.
     publicTheme?: PublicTheme;
     publicAccentColor?: string;
-    // Embed-код или URL Instagram-виджета (SnapWidget/LightWidget); '' очищает.
+    // Embed-код, URL или ID Instagram-виджета (SnapWidget/LightWidget); '' очищает.
     instagramWidgetUrl?: string;
+    // Ник студии в Instagram (с @, без, или ссылкой); '' очищает.
+    instagramUsername?: string;
 }
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
@@ -224,6 +226,18 @@ export async function updateBusiness(
                 };
             }
             updates.instagramWidgetUrl = normalized;
+        }
+    }
+    if (input.instagramUsername !== undefined) {
+        const raw = input.instagramUsername.trim();
+        if (!raw) {
+            updates.instagramUsername = null;
+        } else {
+            const normalized = normalizeInstagramUsername(raw);
+            if (!normalized) {
+                return { ok: false, error: 'Некорректный ник Instagram', code: 'INVALID_INSTAGRAM' };
+            }
+            updates.instagramUsername = normalized;
         }
     }
 

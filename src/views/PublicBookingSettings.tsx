@@ -39,6 +39,7 @@ export default function PublicBookingSettings() {
     const [theme, setTheme] = useState<PublicTheme>('light');
     const [accentColor, setAccentColor] = useState('#7c3aed');
     const [instagramWidget, setInstagramWidget] = useState('');
+    const [instagramUsername, setInstagramUsername] = useState('');
     const [saving, setSaving] = useState(false);
     const [photos, setPhotos] = useState<GalleryItem[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -51,6 +52,7 @@ export default function PublicBookingSettings() {
         setTheme(business.publicTheme === 'dark' ? 'dark' : 'light');
         setAccentColor(business.publicAccentColor);
         setInstagramWidget(business.instagramWidgetUrl ?? '');
+        setInstagramUsername(business.instagramUsername ?? '');
     }, [business]);
 
     // Галерея «Примеры работ».
@@ -120,6 +122,7 @@ export default function PublicBookingSettings() {
                 publicTheme: theme,
                 publicAccentColor: accentColor,
                 instagramWidgetUrl: instagramWidget,
+                instagramUsername,
             });
             if (result.success) {
                 alert('success', 'Сохранено');
@@ -246,17 +249,26 @@ export default function PublicBookingSettings() {
                 </div>
             </div>
 
-            <div className="space-y-2 border-t border-purple-700/40 pt-4">
-                <p className="text-sm font-medium text-purple-200">Instagram-виджет</p>
+            <div className="space-y-3 border-t border-purple-700/40 pt-4">
+                <p className="text-sm font-medium text-purple-200">Instagram</p>
+
+                <TextField
+                    label="Ник студии"
+                    hint="Без @. Покажем ссылку на профиль на странице записи."
+                    value={instagramUsername}
+                    onChange={setInstagramUsername}
+                />
+
                 <Field
+                    label="Сетка постов (необязательно)"
                     inline
-                    hint="Создайте виджет на snapwidget.com (бесплатно) и вставьте код встраивания или ссылку. Покажем сетку постов на странице."
+                    hint="Чтобы показать ленту последних фото: создайте бесплатный виджет на snapwidget.com → вставьте сюда его код, ссылку или ID. Сетка обновляется автоматически."
                 >
                     <textarea
                         value={instagramWidget}
                         onChange={(e) => setInstagramWidget(e.target.value)}
-                        placeholder='<iframe src="https://snapwidget.com/embed/..."></iframe>'
-                        rows={3}
+                        placeholder="Код виджета SnapWidget, ссылка или ID"
+                        rows={2}
                         className={clsx(inputClasses, 'resize-y font-mono text-xs')}
                     />
                 </Field>
