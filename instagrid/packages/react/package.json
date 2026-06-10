@@ -23,6 +23,7 @@
     "@instagrid/widget": "0.0.0"
   },
   "devDependencies": {
-    "@types/react": "^19"
+    "@types/react": "^19",
+    "react": "^19"
   }
 }

@@ -104,6 +104,15 @@ npm test          # core + widget unit tests
 npm run build     # type-check + emit ESM
 ```
 
+## Isolation & extraction
+
+instagrid is self-contained (own lockfile, `tsconfig`, tests, CI) and imports
+nothing from the host app, so it can be lifted into its own repository at any
+time — see [docs/EXTRACTION.md](./docs/EXTRACTION.md). Contributing guidelines:
+[CONTRIBUTING.md](./CONTRIBUTING.md).
+
+Connecting a real Instagram account: [docs/META_SETUP.md](./docs/META_SETUP.md).
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

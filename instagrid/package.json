@@ -5,19 +5,18 @@
   "description": "Self-hostable Instagram feed grid widget",
   "license": "MIT",
   "workspaces": [
-    "packages/*",
-    "apps/*"
+    "packages/*"
   ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "tsc -b packages/core packages/widget packages/server packages/react"
+    "typecheck": "tsc -b"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
-    "happy-dom": "^15.0.0",
+    "happy-dom": "^20.10.2",
     "typescript": "^5",
     "vitest": "^4.1.7"
   }
