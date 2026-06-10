@@ -12,9 +12,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "tsc -b packages/core packages/widget"
+    "typecheck": "tsc -b packages/core packages/widget packages/server"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "happy-dom": "^15.0.0",
     "typescript": "^5",
     "vitest": "^4.1.7"

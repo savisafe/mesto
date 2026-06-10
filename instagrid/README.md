@@ -44,8 +44,24 @@ instead of a backend:
 | --- | --- | --- |
 | `@instagrid/core` | ✅ phase 1 | Types (`FeedItem`, `FeedResponse`, `FeedConfig`), config clamping, grid helpers, `FeedProvider` interface |
 | `@instagrid/widget` | ✅ phase 1 | `<ig-grid>` Web Component (vanilla, zero-deps) |
+| `@instagrid/server` | ✅ phase 2 | Reference backend: public `GET /feeds/:id` (CORS, cache, rate-limit). OAuth + sync land in phase 3 |
 | `@instagrid/react` | ⏳ | Thin React wrapper |
-| `@instagrid/server` | ⏳ | Reference backend: OAuth, sync, public feed API |
+
+### Run the reference API locally
+
+```bash
+cd instagrid/packages/server
+npm run dev    # serves the fixture at http://localhost:8787/feeds/demo
+```
+
+Then point the widget at it:
+
+```html
+<ig-grid endpoint="http://localhost:8787" feed="demo"></ig-grid>
+```
+
+The server returns only public post fields — tokens and account internals never
+leave the backend (`toFeedResponse` is the boundary).
 
 ## Roadmap
 
