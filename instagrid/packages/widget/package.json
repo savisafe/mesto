@@ -1,0 +1,22 @@
+{
+  "name": "@instagrid/widget",
+  "version": "0.0.0",
+  "description": "<ig-grid> Web Component — a zero-dependency Instagram feed grid",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@instagrid/core": "0.0.0"
+  }
+}

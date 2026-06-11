@@ -1,0 +1,23 @@
+{
+  "name": "@instagrid/server",
+  "version": "0.0.0",
+  "description": "Reference backend for instagrid: public feed API (phase 2)",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --experimental-strip-types src/dev.ts"
+  },
+  "dependencies": {
+    "@instagrid/core": "0.0.0"
+  }
+}

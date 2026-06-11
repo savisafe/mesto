@@ -1,0 +1,77 @@
+{
+  "username": "petsalon.astana",
+  "updatedAt": "2026-06-09T08:30:00Z",
+  "items": [
+    {
+      "id": "3401",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig1/400/400",
+      "permalink": "https://instagram.com/p/Cx3401",
+      "caption": "Стрижка померанца до/после ✂️",
+      "takenAt": "2026-06-09T08:30:00Z"
+    },
+    {
+      "id": "3398",
+      "type": "carousel",
+      "thumbUrl": "https://picsum.photos/seed/ig2/400/400",
+      "permalink": "https://instagram.com/p/Cx3398",
+      "caption": "Команда мастеров 🐶",
+      "takenAt": "2026-06-07T14:10:00Z"
+    },
+    {
+      "id": "3390",
+      "type": "video",
+      "thumbUrl": "https://picsum.photos/seed/ig3/400/400",
+      "permalink": "https://instagram.com/p/Cx3390",
+      "caption": "Купание мейн-куна",
+      "takenAt": "2026-06-05T11:00:00Z"
+    },
+    {
+      "id": "3385",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig4/400/400",
+      "permalink": "https://instagram.com/p/Cx3385",
+      "takenAt": "2026-06-03T09:45:00Z"
+    },
+    {
+      "id": "3380",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig5/400/400",
+      "permalink": "https://instagram.com/p/Cx3380",
+      "caption": "Новый груминг-стол",
+      "takenAt": "2026-06-01T16:20:00Z"
+    },
+    {
+      "id": "3372",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig6/400/400",
+      "permalink": "https://instagram.com/p/Cx3372",
+      "caption": "Йорк после спа 💇",
+      "takenAt": "2026-05-29T13:05:00Z"
+    },
+    {
+      "id": "3365",
+      "type": "carousel",
+      "thumbUrl": "https://picsum.photos/seed/ig7/400/400",
+      "permalink": "https://instagram.com/p/Cx3365",
+      "caption": "Отзывы клиентов",
+      "takenAt": "2026-05-27T10:00:00Z"
+    },
+    {
+      "id": "3360",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig8/400/400",
+      "permalink": "https://instagram.com/p/Cx3360",
+      "caption": "Когтерезка для кошек",
+      "takenAt": "2026-05-25T12:30:00Z"
+    },
+    {
+      "id": "3351",
+      "type": "image",
+      "thumbUrl": "https://picsum.photos/seed/ig9/400/400",
+      "permalink": "https://instagram.com/p/Cx3351",
+      "caption": "Запись через mesto ✅",
+      "takenAt": "2026-05-22T15:15:00Z"
+    }
+  ]
+}

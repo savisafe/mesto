@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, configDefaults } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
@@ -8,6 +8,8 @@ export default defineConfig({
         // Один процесс на весь прогон — pglite-инстансы держим в памяти
         // воркера, изоляция между тестами через resetDb() в beforeEach.
         fileParallelism: false,
+        // instagrid — изолированный пакет со своим тулингом (свой vitest).
+        exclude: [...configDefaults.exclude, 'instagrid/**'],
     },
     resolve: {
         alias: {

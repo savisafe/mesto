@@ -10,6 +10,8 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // instagrid — изолированный пакет со своим тулингом, вне линта приложения.
+  { ignores: ["instagrid/**"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 

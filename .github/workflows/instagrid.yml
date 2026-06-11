@@ -1,0 +1,29 @@
+# Isolated CI lane for the embedded instagrid monorepo. Runs only when
+# instagrid/** changes and is fully decoupled from the mesto app's CI job.
+# On extraction this is replaced by instagrid/.github/workflows/ci.yml.
+name: instagrid CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['instagrid/**']
+  pull_request:
+    paths: ['instagrid/**']
+
+defaults:
+  run:
+    working-directory: instagrid
+
+jobs:
+  instagrid:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: instagrid/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test

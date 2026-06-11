@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>instagrid — demo</title>
+        <style>
+            body {
+                font: 16px/1.5 system-ui, sans-serif;
+                max-width: 480px;
+                margin: 40px auto;
+                padding: 0 16px;
+                color: #27272a;
+            }
+            h1 {
+                font-size: 20px;
+            }
+            .controls {
+                display: flex;
+                gap: 8px;
+                margin: 16px 0;
+            }
+            .controls label {
+                font-size: 13px;
+                color: #71717a;
+            }
+            code {
+                background: #f4f4f5;
+                padding: 2px 6px;
+                border-radius: 6px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>instagrid &lt;ig-grid&gt;</h1>
+        <p>Renders <code>../../fixtures/feed.sample.json</code> — no backend needed.</p>
+
+        <div class="controls">
+            <label>columns <input id="cols" type="number" value="3" min="1" max="8" /></label>
+            <label>rows <input id="rows" type="number" value="3" min="1" max="8" /></label>
+            <label>theme
+                <select id="theme">
+                    <option value="light">light</option>
+                    <option value="dark">dark</option>
+                </select>
+            </label>
+        </div>
+
+        <ig-grid
+            id="grid"
+            src="../../fixtures/feed.sample.json"
+            columns="3"
+            rows="3"
+        ></ig-grid>
+
+        <!-- In production this is a single CDN script; here we load the source module. -->
+        <script type="module" src="../../packages/widget/src/index.ts"></script>
+        <script type="module">
+            const grid = document.getElementById('grid');
+            document.getElementById('cols').addEventListener('input', (e) =>
+                grid.setAttribute('columns', e.target.value),
+            );
+            document.getElementById('rows').addEventListener('input', (e) =>
+                grid.setAttribute('rows', e.target.value),
+            );
+            document.getElementById('theme').addEventListener('change', (e) =>
+                grid.setAttribute('theme', e.target.value),
+            );
+        </script>
+    </body>
+</html>

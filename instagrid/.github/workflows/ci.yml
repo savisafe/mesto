@@ -1,0 +1,25 @@
+# instagrid CI — independent of the host app.
+#
+# While instagrid lives inside the mesto repo this file is INERT (GitHub only
+# runs workflows from the repository root `.github/workflows`). It is kept here
+# so that extracting `instagrid/` into its own repository yields a working CI
+# out of the box — see docs/EXTRACTION.md.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
