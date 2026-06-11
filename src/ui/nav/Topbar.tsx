@@ -1,20 +1,32 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { Menu as MenuIcon } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ChevronLeft, Menu as MenuIcon } from 'lucide-react';
 import { getActiveNavLabel } from './navItems';
+import { BusinessSwitcher } from './BusinessSwitcher';
 import { UserMenu } from './UserMenu';
 
 interface TopbarProps {
     onOpenMobileNav: () => void;
+    canGoBack: boolean;
 }
 
-export const Topbar = ({ onOpenMobileNav }: TopbarProps) => {
+export const Topbar = ({ onOpenMobileNav, canGoBack }: TopbarProps) => {
     const pathname = usePathname();
+    const router = useRouter();
     const title = getActiveNavLabel(pathname) ?? 'Mesto';
 
     return (
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-purple-800/60 bg-purple-950/70 px-4 backdrop-blur md:px-6">
+            {canGoBack && (
+                <button
+                    onClick={() => router.back()}
+                    aria-label="Назад"
+                    className="cursor-pointer rounded-lg p-1.5 text-purple-200 hover:bg-purple-800/40 hover:text-white lg:hidden"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+            )}
             <button
                 onClick={onOpenMobileNav}
                 aria-label="Открыть меню"
@@ -24,6 +36,7 @@ export const Topbar = ({ onOpenMobileNav }: TopbarProps) => {
             </button>
             <h1 className="truncate text-lg font-semibold text-white">{title}</h1>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                <BusinessSwitcher />
                 <UserMenu />
             </div>
         </header>

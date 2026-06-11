@@ -18,6 +18,7 @@ import { toPublicUser, type PublicUser, type UserRole } from '@/db/schema';
 import {
     listBusinesses,
     listArchivedBusinesses,
+    listMyMemberships,
     getBusiness,
     createBusiness,
     updateBusiness,
@@ -465,5 +466,53 @@ describe('purgeExpiredArchives', () => {
         const servicesLeft = await db.select().from(schema.services);
         expect(clientsLeft).toHaveLength(0);
         expect(servicesLeft).toHaveLength(0);
+    });
+});
+
+describe('listMyMemberships', () => {
+    it('UNAUTHORIZED без авторизации', async () => {
+        const result = await listMyMemberships();
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.code).toBe('UNAUTHORIZED');
+    });
+
+    it('возвращает member-роли пользователя по бизнесам (без владения)', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        const worker = await makeUser({ email: 'worker@test.local', role: 'EMPLOYEE' });
+        const [bizA] = await db
+            .insert(schema.businesses)
+            .values({ name: 'A', ownerId: owner.id })
+            .returning();
+        const [bizB] = await db
+            .insert(schema.businesses)
+            .values({ name: 'B', ownerId: owner.id })
+            .returning();
+        await db.insert(schema.businessMembers).values([
+            { businessId: bizA.id, userId: worker.id, role: 'MANAGER' },
+            { businessId: bizB.id, userId: worker.id, role: 'EMPLOYEE' },
+        ]);
+
+        await loginAs(worker);
+        const result = await listMyMemberships();
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        const byBiz = Object.fromEntries(result.data.map((m) => [m.businessId, m.role]));
+        expect(byBiz[bizA.id]).toBe('MANAGER');
+        expect(byBiz[bizB.id]).toBe('EMPLOYEE');
+        expect(result.data).toHaveLength(2);
+    });
+
+    it('у владельца без member-связей возвращает пустой список', async () => {
+        const owner = await makeUser({ email: 'owner@test.local' });
+        await db.insert(schema.businesses).values({ name: 'A', ownerId: owner.id });
+
+        await loginAs(owner);
+        const result = await listMyMemberships();
+
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(result.data).toHaveLength(0);
     });
 });

@@ -28,7 +28,7 @@ export default function MyBusinessPage() {
         fetchBusinesses,
         fetchArchivedBusinesses,
     } = useBusiness();
-    const { hasAccess } = useAccess();
+    const access = useAccess('OWNER', 'ADMIN');
 
     const [businessName, setBusinessName] = useState('');
     const [businessDescription, setBusinessDescription] = useState('');
@@ -118,12 +118,8 @@ export default function MyBusinessPage() {
         }
     };
 
-    if (!hasAccess) {
-        return (
-            <LayoutPage>
-                <div className="text-center text-red-400">У вас нет доступа к этой странице</div>
-            </LayoutPage>
-        );
+    if (access.status !== 'ok') {
+        return <LayoutPage>{access.component}</LayoutPage>;
     }
 
     return (

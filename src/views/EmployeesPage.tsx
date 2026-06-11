@@ -25,7 +25,7 @@ const ROLE_LABELS: Record<'OWNER' | BusinessMemberRole, string> = {
 };
 
 export default function EmployeesPage() {
-    const access = useAccess();
+    const access = useAccess('OWNER', 'ADMIN');
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 

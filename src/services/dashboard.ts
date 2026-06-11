@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     businesses,
@@ -23,14 +23,18 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
         .where(eq(businessMembers.userId, userId));
     const memberBizIds = memberships.map((m) => m.id);
 
+    const ownership =
+        memberBizIds.length > 0
+            ? or(eq(businesses.ownerId, userId), inArray(businesses.id, memberBizIds))
+            : eq(businesses.ownerId, userId);
+
+    // Дашборд показывает только активные бизнесы: не в архиве (archivedAt IS NULL)
+    // и не выключенные владельцем (isActive = true). Счётчики ниже агрегируются
+    // по этому же списку, чтобы цифры соответствовали показанным карточкам.
     const ownedAndMember = await db
         .select()
         .from(businesses)
-        .where(
-            memberBizIds.length > 0
-                ? or(eq(businesses.ownerId, userId), inArray(businesses.id, memberBizIds))
-                : eq(businesses.ownerId, userId),
-        );
+        .where(and(ownership, isNull(businesses.archivedAt), eq(businesses.isActive, true)));
 
     if (ownedAndMember.length === 0) {
         return {

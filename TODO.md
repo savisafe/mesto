@@ -1,5 +1,40 @@
 # TODO
 
+## Статус (обновлено 2026-06-11)
+
+Сверка крупных блоков с кодом:
+
+- ✅ **Интеграция с AI-bot** — готово: `db/schema/api-keys.ts`, `lib/api-auth`,
+  внешний API (`app/api/external/*`: bookings c идемпотентностью, clients,
+  services, team, availability, cancel), UI ключей `SettingsApiPage`.
+- ✅ **Рабочий график и блокировка слотов** — готово: `work-schedules.ts`,
+  `time-off.ts`, `services/availability.ts` (+тесты), `SchedulePage`,
+  `services/schedule.ts`, эндпоинт `external/availability`.
+- ✅ **Публичная страница бизнеса** — в основном готово: `app/b/[slug]`,
+  `PublicBookingPage`, `services/public-booking.ts`, поля slug/тема/акцент/
+  Instagram, галерея (`api/gallery`, `services/gallery.ts`, схема `gallery`).
+- 🟡 **Подтверждение через Telegram/WhatsApp** — Telegram-бот готов
+  (`lib/telegram.ts`, `auth.ts: createTelegramVerifyLink/confirmTelegram`,
+  `api/telegram/webhook`, токен `telegram_verify`). WhatsApp — не сделано.
+- 🔴 **Автовыгрузка контактов из Telegram/WhatsApp** — не сделано (нет
+  `contact_sources`, нет `services/imports/telegram.ts`). Задел: `clients.telegramId`.
+
+Мелкие пункты (внизу файла):
+
+- ✅ **Ролевая модель** — починена: гейтинг по роли в бизнесе
+  (OWNER/MANAGER/EMPLOYEE) + глобальный ADMIN. `useAccess` теперь enforce'ит
+  роли, меню фильтруется (`getVisibleNavGroups`), роль в текущем бизнесе
+  приходит из `BusinessContext.currentRole`. Ограничены: График и Финансы
+  (OWNER/MANAGER), Сотрудники/Бизнесы/Настройки/API (OWNER/ADMIN).
+  **Осталось:** продублировать проверку ролей на сервере (services/actions) —
+  сейчас изоляция по бизнесу есть, но конкретная роль на бэке не проверяется
+  (member может дёрнуть finance-экшен напрямую).
+- 🔴 Служба поддержки — не сделано.
+- 🟡 График неудобно выставлять (`/schedule`) — функционал есть, нужен UX-проход.
+- 🔴 Услуги вынести в отдельную страницу с выбором сотрудника — не сделано
+  (отдельной `/services` нет, услуги живут внутри календаря; наружу есть
+  только `api/external/services`).
+
 ## Идеи и нерешённые вопросы
 
 ### Подтверждение аккаунта через Telegram / WhatsApp
@@ -169,5 +204,8 @@ Reference: https://dikidi.net/1869595 — публичный виджет зап
 
 подумать про службу поддержки
 не удобно выставлять график http://localhost:3001/schedule
-не работает ролевая модель
 услуги вынести в отдельную страницу нужен выбор сотрудника
+
+<!-- «не работает ролевая модель» — починено, см. блок «Статус» выше.
+     Осталось продублировать проверку ролей на сервере. -->
+дублировать проверку ролей на сервере (services/actions), не только в UI

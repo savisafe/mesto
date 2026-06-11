@@ -6,6 +6,7 @@ import {
     businessMembers,
     type Business,
     type NewBusiness,
+    type BusinessMemberRole,
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
 import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
@@ -81,6 +82,26 @@ export async function listBusinesses(): Promise<ServiceResult<Business[]>> {
         .select()
         .from(businesses)
         .where(and(ownership, isNull(businesses.archivedAt)));
+    return { ok: true, data: rows };
+}
+
+export interface Membership {
+    businessId: string;
+    role: BusinessMemberRole;
+}
+
+// Роли текущего пользователя как участника (member) бизнесов. Владение
+// (ownerId) клиент определяет сам по Business.ownerId, поэтому здесь только
+// member-связи. Нужно, чтобы на клиенте знать роль в выбранном бизнесе для
+// ролевого гейтинга меню/страниц.
+export async function listMyMemberships(): Promise<ServiceResult<Membership[]>> {
+    const user = await getCurrentUser();
+    if (!user) return UNAUTHORIZED;
+
+    const rows = await db
+        .select({ businessId: businessMembers.businessId, role: businessMembers.role })
+        .from(businessMembers)
+        .where(eq(businessMembers.userId, user.id));
     return { ok: true, data: rows };
 }
 

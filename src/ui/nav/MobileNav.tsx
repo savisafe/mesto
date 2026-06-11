@@ -5,7 +5,8 @@ import { X, LogOut } from 'lucide-react';
 import { Logo } from '@/ui/logo/Logo';
 import { InstallButton } from '@/ui/pwa/InstallButton';
 import { useAuth } from '@/contexts/AuthContext';
-import { navGroups } from './navItems';
+import { useEffectiveRole } from '@/hooks/useAccess';
+import { getVisibleNavGroups } from './navItems';
 import { NavLink } from './NavLink';
 
 interface MobileNavProps {
@@ -15,6 +16,8 @@ interface MobileNavProps {
 
 export const MobileNav = ({ open, onClose }: MobileNavProps) => {
     const { userName, logout } = useAuth();
+    const { role } = useEffectiveRole();
+    const visibleGroups = getVisibleNavGroups(role);
 
     return (
         <AnimatePresence>
@@ -49,7 +52,7 @@ export const MobileNav = ({ open, onClose }: MobileNavProps) => {
                     </div>
 
                     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-                        {navGroups.map((group) => (
+                        {visibleGroups.map((group) => (
                             <div key={group.label} className="space-y-1">
                                 <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-purple-500">
                                     {group.label}

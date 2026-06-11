@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBusiness } from '@/contexts/BusinessContext';
 import { routes } from '@/routes/routes';
 import type { UserRole } from '@/db/schema';
 
@@ -10,11 +11,25 @@ interface UseAccessResult {
     component: React.ReactNode | null;
 }
 
-export const useAccess = (...requiredRoles: UserRole[]): UseAccessResult => {
-    const { user, role } = useAuth();
-    const router = useRouter();
+// Эффективная роль для гейтинга: глобальный ADMIN видит всё; иначе берём роль
+// в выбранном бизнесе. Если бизнес не выбран (пользователь ещё без бизнеса) —
+// откатываемся на глобальную роль, чтобы будущий владелец мог создать бизнес.
+// `ready` = false, пока членства не загружены: до этого роль использовать нельзя.
+export const useEffectiveRole = (): { role: UserRole | null; ready: boolean } => {
+    const { role: globalRole } = useAuth();
+    const { currentRole, accessReady } = useBusiness();
 
-    const isAllowed = requiredRoles.length === 0 || (role !== null && requiredRoles.includes(role));
+    if (globalRole === 'ADMIN') return { role: 'ADMIN', ready: true };
+    if (!accessReady) return { role: null, ready: false };
+    return { role: currentRole ?? globalRole, ready: true };
+};
+
+// Гейтинг страницы. Без аргументов — только проверка авторизации.
+// С ролями — доступ по роли в текущем бизнесе (см. useEffectiveRole).
+export const useAccess = (...requiredRoles: UserRole[]): UseAccessResult => {
+    const { user } = useAuth();
+    const { role: effectiveRole, ready } = useEffectiveRole();
+    const router = useRouter();
 
     useEffect(() => {
         if (!user) router.replace(routes.LOGIN);
@@ -24,6 +39,16 @@ export const useAccess = (...requiredRoles: UserRole[]): UseAccessResult => {
         return { status: 'loading', hasAccess: false, component: null };
     }
 
+    if (requiredRoles.length === 0) {
+        return { status: 'ok', hasAccess: true, component: null };
+    }
+
+    // Роль ещё не определена — показываем «загрузку», а не «запрещено».
+    if (!ready) {
+        return { status: 'loading', hasAccess: false, component: null };
+    }
+
+    const isAllowed = effectiveRole !== null && requiredRoles.includes(effectiveRole);
     if (!isAllowed) {
         return {
             status: 'forbidden',
