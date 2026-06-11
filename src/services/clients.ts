@@ -1,10 +1,11 @@
 import 'server-only';
-import { and, eq, or, ilike, sql, desc } from 'drizzle-orm';
+import { and, eq, or, ilike, inArray, isNull, ne, sql, desc } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     clients,
     businesses,
     businessMembers,
+    appointments,
     type Client,
     type NewClient,
 } from '@/db/schema';
@@ -19,6 +20,9 @@ export interface ListClientsInput {
     search?: string;
     page?: number;
     perPage?: number;
+    // Фильтр по сотруднику: id — клиенты с записями к этому сотруднику;
+    // null — клиенты с записями без сотрудника; undefined — без фильтра.
+    employeeUserId?: string | null;
 }
 
 export interface ListClientsResult {
@@ -90,16 +94,35 @@ export async function listClients(
     const offset = (page - 1) * perPage;
 
     const search = input.search?.trim() ?? '';
-    const where =
-        search.length > 0
-            ? and(
-                  eq(clients.businessId, input.businessId),
-                  or(
-                      ilike(clients.name, `%${search}%`),
-                      ilike(clients.phone, `%${search}%`),
-                  ),
-              )
-            : eq(clients.businessId, input.businessId);
+    const conditions = [eq(clients.businessId, input.businessId)];
+
+    if (search.length > 0) {
+        conditions.push(
+            or(ilike(clients.name, `%${search}%`), ilike(clients.phone, `%${search}%`))!,
+        );
+    }
+
+    // Фильтр по сотруднику: оставляем клиентов, у которых есть неотменённые
+    // записи к выбранному сотруднику (или без сотрудника, если null).
+    if (input.employeeUserId !== undefined) {
+        const employeeCond =
+            input.employeeUserId === null
+                ? isNull(appointments.employeeUserId)
+                : eq(appointments.employeeUserId, input.employeeUserId);
+        const clientIdsForEmployee = db
+            .selectDistinct({ id: appointments.clientId })
+            .from(appointments)
+            .where(
+                and(
+                    eq(appointments.businessId, input.businessId),
+                    ne(appointments.status, 'cancelled'),
+                    employeeCond,
+                ),
+            );
+        conditions.push(inArray(clients.id, clientIdsForEmployee));
+    }
+
+    const where = and(...conditions);
 
     const [rows, [count]] = await Promise.all([
         db
