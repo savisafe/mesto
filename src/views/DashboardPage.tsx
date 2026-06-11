@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
-import type { DashboardStats } from '@/services/dashboard';
+import { DashboardStats } from '@/views/dashboard/DashboardStats';
+import type { DashboardStats as DashboardStatsData } from '@/services/dashboard';
 
 interface Props {
-    stats: DashboardStats;
+    stats: DashboardStatsData;
     userName: string;
 }
 
@@ -20,23 +21,7 @@ export function DashboardView({ stats, userName }: Props) {
                     <h1 className="text-4xl font-bold text-white tracking-tight">{userName}</h1>
                 </header>
 
-                <section
-                    className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10"
-                    aria-label="Сводка"
-                >
-                    <StatCard
-                        label="Бизнесов"
-                        value={stats.businesses.length}
-                        href="/my-business"
-                    />
-                    <StatCard label="Клиентов" value={stats.totalClients} href="/clients" />
-                    <StatCard label="Сотрудников" value={stats.totalMembers} href="/employees" />
-                    <StatCard
-                        label="Записей в работе"
-                        value={stats.scheduledAppointments}
-                        href="/calendar"
-                    />
-                </section>
+                <DashboardStats stats={stats} />
 
                 <section className="mb-10">
                     <SectionHeader title="Мои бизнесы" href="/my-business" />
@@ -79,18 +64,6 @@ export function DashboardView({ stats, userName }: Props) {
 }
 
 const comingSoon = ['Финансы', 'Отзывы', 'Уведомления клиентам'];
-
-function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
-    return (
-        <Link
-            href={href}
-            className="block bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 hover:bg-white/10 transition"
-        >
-            <p className="text-purple-300 text-sm mb-2">{label}</p>
-            <p className="text-3xl font-semibold text-white tracking-tight tabular-nums">{value}</p>
-        </Link>
-    );
-}
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
     return (
