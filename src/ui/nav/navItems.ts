@@ -82,6 +82,23 @@ export const getVisibleNavGroups = (role: UserRole | null): NavGroup[] =>
         }))
         .filter((group) => group.items.length > 0);
 
+// Разделы для нижней таб-панели на мобильном — самые частые в работе.
+// Порядок фиксирован; роль-фильтр наследуется из getVisibleNavGroups
+// (например, Финансы скрыты у EMPLOYEE).
+const BOTTOM_NAV_HREFS: string[] = [
+    routes.DASHBOARD,
+    routes.CALENDAR,
+    routes.CLIENTS,
+    routes.FINANCE,
+];
+
+export const getBottomNavItems = (role: UserRole | null): NavItem[] => {
+    const visible = getVisibleNavGroups(role).flatMap((group) => group.items);
+    return BOTTOM_NAV_HREFS.map((href) => visible.find((item) => item.href === href)).filter(
+        (item): item is NavItem => Boolean(item),
+    );
+};
+
 export const isNavItemActive = (pathname: string, item: NavItem): boolean =>
     item.exact
         ? pathname === item.href

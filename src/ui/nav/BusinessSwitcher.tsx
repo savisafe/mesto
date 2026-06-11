@@ -6,9 +6,14 @@ import { Building2, Check, ChevronDown } from 'lucide-react';
 import clsx from 'clsx';
 import { useBusiness } from '@/contexts/BusinessContext';
 
-// Переключатель текущего бизнеса в шапке. От него зависят все экраны
+interface BusinessSwitcherProps {
+    // На всю ширину контейнера (для выдвижного меню), иначе компактный (шапка).
+    fullWidth?: boolean;
+}
+
+// Переключатель текущего бизнеса. От него зависят все экраны
 // (клиенты, календарь, сотрудники, финансы) — они читают currentBusiness.
-export const BusinessSwitcher = () => {
+export const BusinessSwitcher = ({ fullWidth = false }: BusinessSwitcherProps) => {
     const { businessesData, currentBusiness, setCurrentBusiness } = useBusiness();
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +34,12 @@ export const BusinessSwitcher = () => {
     // Один бизнес — переключать нечего, показываем неинтерактивную плашку.
     if (businessesData.length === 1) {
         return (
-            <span className="flex max-w-[10rem] items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-purple-200 sm:max-w-[14rem]">
+            <span
+                className={clsx(
+                    'flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-purple-200',
+                    fullWidth ? 'w-full' : 'max-w-[10rem] sm:max-w-[14rem]',
+                )}
+            >
                 <Building2 size={16} className="shrink-0 text-purple-400" />
                 <span className="truncate">{label}</span>
             </span>
@@ -42,12 +52,15 @@ export const BusinessSwitcher = () => {
     };
 
     return (
-        <div ref={ref} className="relative">
+        <div ref={ref} className={clsx('relative', fullWidth && 'w-full')}>
             <button
                 onClick={() => setOpen((prev) => !prev)}
                 aria-haspopup="listbox"
                 aria-expanded={open}
-                className="flex max-w-[10rem] cursor-pointer items-center gap-2 rounded-lg border border-purple-700/50 bg-purple-900/40 px-2.5 py-1.5 text-sm text-white transition hover:bg-purple-800/50 sm:max-w-[14rem]"
+                className={clsx(
+                    'flex cursor-pointer items-center gap-2 rounded-lg border border-purple-700/50 bg-purple-900/40 px-2.5 py-1.5 text-sm text-white transition hover:bg-purple-800/50',
+                    fullWidth ? 'w-full' : 'max-w-[10rem] sm:max-w-[14rem]',
+                )}
             >
                 <Building2 size={16} className="shrink-0 text-purple-300" />
                 <span className="truncate">{label}</span>
@@ -65,7 +78,10 @@ export const BusinessSwitcher = () => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 z-40 mt-1.5 max-h-72 w-60 overflow-y-auto rounded-xl border border-purple-700/60 bg-purple-950/95 p-1.5 shadow-xl backdrop-blur"
+                        className={clsx(
+                            'absolute z-40 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-purple-700/60 bg-purple-950/95 p-1.5 shadow-xl backdrop-blur',
+                            fullWidth ? 'inset-x-0' : 'right-0 w-60',
+                        )}
                     >
                         {businessesData.map((biz) => {
                             const active = biz.id === currentBusiness;

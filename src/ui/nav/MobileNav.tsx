@@ -7,6 +7,7 @@ import { InstallButton } from '@/ui/pwa/InstallButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffectiveRole } from '@/hooks/useAccess';
 import { getVisibleNavGroups } from './navItems';
+import { BusinessSwitcher } from './BusinessSwitcher';
 import { NavLink } from './NavLink';
 
 interface MobileNavProps {
@@ -49,6 +50,13 @@ export const MobileNav = ({ open, onClose }: MobileNavProps) => {
                         >
                             <X size={22} />
                         </button>
+                    </div>
+
+                    <div className="border-b border-purple-800/60 px-3 py-3">
+                        <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-wider text-purple-500">
+                            Бизнес
+                        </p>
+                        <BusinessSwitcher fullWidth />
                     </div>
 
                     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
