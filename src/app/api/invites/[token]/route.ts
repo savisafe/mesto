@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { acceptInvite } from '@/services/employees';
+import { acceptInvite, getInviteSignInTarget } from '@/services/employees';
+import { routes, authPathWithParams } from '@/routes/routes';
 
 export const runtime = 'nodejs';
 
@@ -11,13 +12,17 @@ export async function GET(
     const { token } = await params;
     const user = await getCurrentUser();
 
-    // Без сессии — отправляем в /login с next-параметром, чтобы вернуться
-    // и принять инвайт сразу после авторизации.
+    // Без сессии ведём на регистрацию (если аккаунта по приглашению ещё нет)
+    // или на вход (если есть) с next-параметром, чтобы вернуться и принять
+    // инвайт сразу после авторизации.
     if (!user) {
-        const next = `/api/invites/${encodeURIComponent(token)}`;
-        return NextResponse.redirect(
-            new URL(`/login?next=${encodeURIComponent(next)}`, req.url),
-        );
+        const target = await getInviteSignInTarget(token);
+        const base = target && !target.userExists ? routes.REGISTRATION : routes.LOGIN;
+        const path = authPathWithParams(base, {
+            next: `/api/invites/${token}`,
+            email: target?.email,
+        });
+        return NextResponse.redirect(new URL(path, req.url));
     }
 
     const result = await acceptInvite(token);

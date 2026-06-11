@@ -2,17 +2,23 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/ui/button/Button';
 import { TextField, PasswordField } from '@/ui/form';
 import { Popup } from '@/ui/popup/Popup';
 import { useNotification } from '@/contexts/NotificationContext';
 import { registerAction } from '@/actions/auth';
-import { routes } from '@/routes/routes';
+import { routes, authPathWithParams } from '@/routes/routes';
 
 export default function RegistrationPage() {
     const alert = useNotification();
+    const searchParams = useSearchParams();
+    // Контекст приглашения: куда вернуться после регистрации и какой email
+    // ожидается (предзаполняем, чтобы он совпал с приглашением).
+    const next = searchParams?.get('next') ?? undefined;
+    const invitedEmail = searchParams?.get('email') ?? '';
     const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(invitedEmail);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
@@ -32,12 +38,7 @@ export default function RegistrationPage() {
 
         setLoading(true);
         try {
-            const result = await registerAction({
-                email,
-                password,
-                name,
-                phone,
-            });
+            const result = await registerAction({ email, password, name, phone }, next);
             if (!result.ok) alert('error', result.error);
         } catch (err) {
             const message = err instanceof Error ? err.message : '';
@@ -91,7 +92,10 @@ export default function RegistrationPage() {
 
             <p className="mt-6 text-purple-400 text-sm text-center">
                 Есть аккаунт?{' '}
-                <Link href={routes.LOGIN} className="underline hover:text-purple-300">
+                <Link
+                    href={authPathWithParams(routes.LOGIN, { next, email: invitedEmail })}
+                    className="underline hover:text-purple-300"
+                >
                     войдите
                 </Link>
             </p>

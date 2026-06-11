@@ -1,6 +1,7 @@
 import 'server-only';
 import { Resend } from 'resend';
 import nodemailer, { type Transporter } from 'nodemailer';
+import { routes, authPathWithParams } from '@/routes/routes';
 
 const apiKey = process.env.RESEND_API_KEY;
 const resend = apiKey ? new Resend(apiKey) : null;
@@ -88,17 +89,25 @@ export async function sendInviteEmail(
     businessName: string,
     inviterName: string,
     token: string,
+    userExists: boolean,
 ): Promise<void> {
-    const url = `${APP_URL}/api/invites/${token}`;
+    // Если аккаунта ещё нет — ведём на регистрацию, иначе на вход. В обоих
+    // случаях токен инвайта передаётся через next: после авторизации
+    // /api/invites/<token> примет приглашение автоматически. email
+    // предзаполняем, чтобы он совпал с приглашением (иначе EMAIL_MISMATCH).
+    const base = userExists ? routes.LOGIN : routes.REGISTRATION;
+    const path = authPathWithParams(base, { next: `/api/invites/${token}`, email: to });
+    const url = `${APP_URL}${path}`;
+    const action = userExists
+        ? 'Войдите в аккаунт, чтобы принять приглашение:'
+        : 'Зарегистрируйтесь, чтобы принять приглашение:';
     await send({
         to,
         subject: `Приглашение в «${businessName}» — Mesto`,
         html: `
             <p>Здравствуйте!</p>
             <p>${inviterName} приглашает вас в команду «${businessName}» на Mesto.</p>
-            <p>Принять приглашение: <a href="${url}">${url}</a></p>
-            <p>Если у вас ещё нет аккаунта Mesto — сначала зарегистрируйтесь с этим email,
-               затем перейдите по ссылке снова.</p>
+            <p>${action} <a href="${url}">${url}</a></p>
             <p>Ссылка действует 7 дней.</p>
         `,
     });
