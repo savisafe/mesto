@@ -27,7 +27,7 @@ import {
 } from './finance/financeHelpers';
 
 export default function FinancePage() {
-    const access = useAccess();
+    const access = useAccess('OWNER', 'ADMIN', 'MANAGER');
     const { currentBusiness, businessesData } = useBusiness();
     const alert = useNotification();
 

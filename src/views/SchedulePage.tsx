@@ -52,7 +52,7 @@ const hhmmToMin = (s: string) => {
 };
 
 export default function SchedulePage() {
-    const access = useAccess();
+    const access = useAccess('OWNER', 'ADMIN', 'MANAGER');
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 

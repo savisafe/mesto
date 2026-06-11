@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, Menu as MenuIcon } from 'lucide-react';
 import { getActiveNavLabel } from './navItems';
+import { BusinessSwitcher } from './BusinessSwitcher';
 import { UserMenu } from './UserMenu';
 
 interface TopbarProps {
@@ -35,6 +36,7 @@ export const Topbar = ({ onOpenMobileNav, canGoBack }: TopbarProps) => {
             </button>
             <h1 className="truncate text-lg font-semibold text-white">{title}</h1>
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                <BusinessSwitcher />
                 <UserMenu />
             </div>
         </header>

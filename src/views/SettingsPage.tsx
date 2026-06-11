@@ -6,10 +6,12 @@ import { Button } from '@/ui/button/Button';
 import { TextField } from '@/ui/form';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccess } from '@/hooks/useAccess';
 import { useNotification } from '@/contexts/NotificationContext';
 import { routes } from '@/routes/routes';
 
 export default function SettingsPage() {
+    const access = useAccess('OWNER', 'ADMIN');
     const { businessesData, currentBusiness, updateBusiness } = useBusiness();
     const { user } = useAuth();
     const alert = useNotification();
@@ -34,6 +36,10 @@ export default function SettingsPage() {
         setAddress(business.address ?? '');
         setPhone(business.phone ?? '');
     }, [business]);
+
+    if (access.status !== 'ok') {
+        return access.component;
+    }
 
     if (!business) {
         return (

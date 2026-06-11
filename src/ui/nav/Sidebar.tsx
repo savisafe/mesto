@@ -4,7 +4,8 @@ import Link from 'next/link';
 import clsx from 'clsx';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Logo } from '@/ui/logo/Logo';
-import { navGroups } from './navItems';
+import { useEffectiveRole } from '@/hooks/useAccess';
+import { getVisibleNavGroups } from './navItems';
 import { NavLink } from './NavLink';
 
 interface SidebarProps {
@@ -12,7 +13,11 @@ interface SidebarProps {
     onToggleCollapsed: () => void;
 }
 
-export const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => (
+export const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => {
+    const { role } = useEffectiveRole();
+    const visibleGroups = getVisibleNavGroups(role);
+
+    return (
     <aside
         className={clsx(
             'hidden shrink-0 border-r border-purple-800/60 bg-purple-950/40 backdrop-blur lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col',
@@ -31,7 +36,7 @@ export const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => (
         </div>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-            {navGroups.map((group) => (
+            {visibleGroups.map((group) => (
                 <div key={group.label} className="space-y-1">
                     {!collapsed && (
                         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-purple-500">
@@ -59,4 +64,5 @@ export const Sidebar = ({ collapsed, onToggleCollapsed }: SidebarProps) => (
             </button>
         </div>
     </aside>
-);
+    );
+};

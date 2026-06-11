@@ -4,12 +4,14 @@ import { revalidatePath } from 'next/cache';
 import {
     listBusinesses,
     listArchivedBusinesses,
+    listMyMemberships,
     createBusiness,
     updateBusiness,
     archiveBusiness,
     unarchiveBusiness,
     type CreateBusinessInput,
     type UpdateBusinessInput,
+    type Membership,
 } from '@/services/businesses';
 import type { Business } from '@/db/schema';
 
@@ -17,6 +19,11 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
 
 export async function listBusinessesAction(): Promise<ActionResult<Business[]>> {
     const result = await listBusinesses();
+    return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
+}
+
+export async function listMyMembershipsAction(): Promise<ActionResult<Membership[]>> {
+    const result = await listMyMemberships();
     return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
 }
 

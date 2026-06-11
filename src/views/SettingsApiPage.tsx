@@ -13,7 +13,7 @@ import { listApiKeysAction, createApiKeyAction, revokeApiKeyAction } from '@/act
 import type { ApiKeyItem } from '@/services/api-keys';
 
 export default function SettingsApiPage() {
-    const access = useAccess();
+    const access = useAccess('OWNER', 'ADMIN');
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 
