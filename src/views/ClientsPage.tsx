@@ -203,7 +203,6 @@ export default function ClientsPage() {
                                 options={[
                                     { label: 'Все сотрудники', value: FILTER_ALL },
                                     ...members.map((m) => ({ label: m.name, value: m.id })),
-                                    { label: 'Без сотрудника', value: FILTER_UNASSIGNED },
                                 ]}
                             />
                         </div>
