@@ -63,7 +63,8 @@ export function DashboardView({ stats, userName }: Props) {
     );
 }
 
-const comingSoon = ['Финансы', 'Отзывы', 'Уведомления клиентам'];
+// TODO: вернуть вместе с секцией «Скоро» выше, если решим её показывать.
+// const comingSoon = ['Финансы', 'Отзывы', 'Уведомления клиентам'];
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
     return (
