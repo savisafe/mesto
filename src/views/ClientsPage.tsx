@@ -36,6 +36,9 @@ export default function ClientsPage() {
     // Статистика клиента и фильтр по сотруднику — только у владельца бизнеса.
     // (ADMIN — глобальный платформенный супердоступ.)
     const isOwner = role === 'OWNER' || role === 'ADMIN';
+    // Телефон клиента видят владелец и менеджер; сотрудник — нет.
+    const canSeePhone = role === 'OWNER' || role === 'MANAGER' || role === 'ADMIN';
+    const colCount = canSeePhone ? 5 : 4;
     const [statsClient, setStatsClient] = useState<Client | null>(null);
 
     const [search, setSearch] = useState('');
@@ -212,7 +215,9 @@ export default function ClientsPage() {
                         <thead className="bg-purple-900 bg-opacity-50">
                             <tr>
                                 <th className="px-4 py-3 text-purple-300 text-sm">Имя</th>
-                                <th className="px-4 py-3 text-purple-300 text-sm">Телефон</th>
+                                {canSeePhone && (
+                                    <th className="px-4 py-3 text-purple-300 text-sm">Телефон</th>
+                                )}
                                 <th className="px-4 py-3 text-purple-300 text-sm">Email</th>
                                 <th className="px-4 py-3 text-purple-300 text-sm">Заметка</th>
                                 <th className="px-4 py-3 text-purple-300 text-sm">Действия</th>
@@ -221,14 +226,14 @@ export default function ClientsPage() {
                         <tbody>
                             {loading && clients.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center">
+                                    <td colSpan={colCount} className="px-4 py-8 text-center">
                                         <Spinner />
                                     </td>
                                 </tr>
                             ) : clients.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={colCount}
                                         className="px-4 py-8 text-center text-purple-400"
                                     >
                                         {debouncedSearch
@@ -254,9 +259,11 @@ export default function ClientsPage() {
                                                 client.name
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 text-purple-200">
-                                            {client.phone}
-                                        </td>
+                                        {canSeePhone && (
+                                            <td className="px-4 py-3 text-purple-200">
+                                                {client.phone}
+                                            </td>
+                                        )}
                                         <td className="px-4 py-3 text-purple-300 text-sm">
                                             {client.email ?? '—'}
                                         </td>

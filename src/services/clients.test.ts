@@ -143,6 +143,37 @@ describe('listClients', () => {
         expect(result.data.clients).toHaveLength(1);
     });
 
+    it('скрывает телефон клиента от EMPLOYEE, показывает владельцу и менеджеру', async () => {
+        const owner = await makeUser('o@test.local');
+        const manager = await makeUser('m@test.local');
+        const employee = await makeUser('e@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db
+            .insert(schema.businessMembers)
+            .values({ businessId: biz.id, userId: manager.id, role: 'MANAGER' });
+        await db
+            .insert(schema.businessMembers)
+            .values({ businessId: biz.id, userId: employee.id, role: 'EMPLOYEE' });
+        await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'Анна', phone: '+79990001122' });
+
+        await loginAs(owner);
+        const asOwner = await listClients({ businessId: biz.id });
+        expect(asOwner.ok && asOwner.data.clients[0].phone).toBe('+79990001122');
+
+        await loginAs(manager);
+        const asManager = await listClients({ businessId: biz.id });
+        expect(asManager.ok && asManager.data.clients[0].phone).toBe('+79990001122');
+
+        await loginAs(employee);
+        const asEmployee = await listClients({ businessId: biz.id });
+        expect(asEmployee.ok).toBe(true);
+        if (!asEmployee.ok) return;
+        expect(asEmployee.data.clients[0].phone).toBe('');
+        expect(asEmployee.data.clients[0].name).toBe('Анна');
+    });
+
     it('фильтрует клиентов по сотруднику (employeeUserId)', async () => {
         const owner = await makeUser('o@test.local');
         const master = await makeUser('m@test.local');

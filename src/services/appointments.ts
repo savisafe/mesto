@@ -12,7 +12,7 @@ import {
     type AppointmentStatus,
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
-import { checkBusinessAccess } from './_access';
+import { checkBusinessAccess, getBusinessRole, isOwnerOrManager } from './_access';
 import { validateSlot, type ValidateSlotCode } from './availability';
 
 export type ServiceResult<T> =
@@ -128,13 +128,22 @@ async function loadDetails(rows: Appointment[]): Promise<AppointmentDetail[]> {
     }));
 }
 
+// Телефон клиента видят только владелец/менеджер; сотруднику отдаём пустым.
+function applyContactVisibility(
+    details: AppointmentDetail[],
+    role: 'OWNER' | 'MANAGER' | 'EMPLOYEE' | null,
+): AppointmentDetail[] {
+    if (isOwnerOrManager(role)) return details;
+    return details.map((d) => ({ ...d, client: { ...d.client, phone: '' } }));
+}
+
 export async function listAppointments(
     input: ListAppointmentsInput,
 ): Promise<ServiceResult<AppointmentDetail[]>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
-    const access = await checkBusinessAccess(input.businessId, user.id);
-    if (!access) return FORBIDDEN;
+    const role = await getBusinessRole(input.businessId, user.id);
+    if (!role) return FORBIDDEN;
 
     const conditions = [
         eq(appointments.businessId, input.businessId),
@@ -153,7 +162,7 @@ export async function listAppointments(
         .where(and(...conditions))
         .orderBy(asc(appointments.startsAt));
 
-    return { ok: true, data: await loadDetails(rows) };
+    return { ok: true, data: applyContactVisibility(await loadDetails(rows), role) };
 }
 
 async function ensureEmployeeOfBusiness(
@@ -195,8 +204,10 @@ export async function createAppointment(
 ): Promise<ServiceResult<AppointmentDetail>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
-    const access = await checkBusinessAccess(input.businessId, user.id);
-    if (!access) return FORBIDDEN;
+    // Создание записи — только владелец/менеджер (сотрудник не видит телефоны
+    // клиентов и не ведёт запись).
+    const role = await getBusinessRole(input.businessId, user.id);
+    if (!isOwnerOrManager(role)) return FORBIDDEN;
 
     if (!Number.isInteger(input.durationMinutes) || input.durationMinutes <= 0 || input.durationMinutes > 43200) {
         return { ok: false, error: 'Длительность от 1 минуты до 30 дней', code: 'INVALID_DURATION' };
@@ -367,8 +378,8 @@ export async function listPendingConfirmations(
 ): Promise<ServiceResult<AppointmentDetail[]>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
-    const access = await checkBusinessAccess(businessId, user.id);
-    if (!access) return FORBIDDEN;
+    const role = await getBusinessRole(businessId, user.id);
+    if (!role) return FORBIDDEN;
 
     const rows = await db
         .select()
@@ -382,7 +393,7 @@ export async function listPendingConfirmations(
         )
         .orderBy(asc(appointments.startsAt));
 
-    return { ok: true, data: await loadDetails(rows) };
+    return { ok: true, data: applyContactVisibility(await loadDetails(rows), role) };
 }
 
 async function setStatus(

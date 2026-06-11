@@ -56,3 +56,9 @@ export async function getBusinessRole(
     return member?.role ?? null;
 }
 
+// Кто видит контакты клиента (телефон) и управляет операциями (создание
+// записей и т.п.): владелец и менеджер. Сотрудник (EMPLOYEE) — нет.
+export function isOwnerOrManager(role: 'OWNER' | BusinessMemberRole | null): boolean {
+    return role === 'OWNER' || role === 'MANAGER';
+}
+
