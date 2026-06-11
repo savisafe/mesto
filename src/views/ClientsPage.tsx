@@ -14,10 +14,8 @@ import {
     createClientAction,
     updateClientAction,
 } from '@/actions/clients';
-import { ClientsByEmployee } from '@/views/clients/ClientsByEmployee';
+import { ClientStatsModal } from '@/views/clients/ClientStatsModal';
 import type { Client } from '@/db/schema';
-
-type ClientsView = 'all' | 'byEmployee';
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -28,9 +26,9 @@ export default function ClientsPage() {
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 
-    // Разбивку «по сотрудникам» (с выручкой) видят только владелец/менеджер.
-    const canSeeByEmployee = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER';
-    const [view, setView] = useState<ClientsView>('all');
+    // Статистику клиента (визиты/выручка) видят только владелец/менеджер.
+    const canSeeStats = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER';
+    const [statsClient, setStatsClient] = useState<Client | null>(null);
 
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -137,31 +135,17 @@ export default function ClientsPage() {
             <div className="max-w-6xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold text-white">Клиенты ({total})</h1>
-                    {view === 'all' && (
-                        <div className="w-48">
-                            <Button onClick={() => setAddOpen(true)}>Добавить клиента</Button>
-                        </div>
-                    )}
+                    <div className="w-48">
+                        <Button onClick={() => setAddOpen(true)}>Добавить клиента</Button>
+                    </div>
                 </div>
 
-                {canSeeByEmployee && (
-                    <div className="mb-6 inline-flex rounded-xl border border-purple-700/50 bg-purple-900/30 p-1">
-                        <ViewTab active={view === 'all'} onClick={() => setView('all')}>
-                            Все клиенты
-                        </ViewTab>
-                        <ViewTab
-                            active={view === 'byEmployee'}
-                            onClick={() => setView('byEmployee')}
-                        >
-                            По сотрудникам
-                        </ViewTab>
-                    </div>
+                {canSeeStats && (
+                    <p className="mb-4 text-purple-400 text-sm">
+                        Нажмите на имя клиента, чтобы увидеть визиты и выручку.
+                    </p>
                 )}
 
-                {view === 'byEmployee' ? (
-                    <ClientsByEmployee businessId={currentBusiness} />
-                ) : (
-                    <>
                 <div className="mb-6">
                     <TextField
                         type="search"
@@ -207,7 +191,18 @@ export default function ClientsPage() {
                                         key={client.id}
                                         className={`border-t border-purple-700/30 ${client.isBlacklisted ? 'opacity-50' : ''}`}
                                     >
-                                        <td className="px-4 py-3 text-white">{client.name}</td>
+                                        <td className="px-4 py-3 text-white">
+                                            {canSeeStats ? (
+                                                <button
+                                                    onClick={() => setStatsClient(client)}
+                                                    className="cursor-pointer text-left text-white underline decoration-purple-500/40 underline-offset-2 hover:decoration-white"
+                                                >
+                                                    {client.name}
+                                                </button>
+                                            ) : (
+                                                client.name
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-purple-200">
                                             {client.phone}
                                         </td>
@@ -254,8 +249,6 @@ export default function ClientsPage() {
                             →
                         </button>
                     </div>
-                )}
-                    </>
                 )}
 
                 <Modal
@@ -307,28 +300,15 @@ export default function ClientsPage() {
                         onChange={(v) => setForm({ ...form, note: v })}
                     />
                 </Modal>
+
+                {canSeeStats && (
+                    <ClientStatsModal
+                        businessId={currentBusiness}
+                        client={statsClient}
+                        onClose={() => setStatsClient(null)}
+                    />
+                )}
             </div>
         </LayoutPage>
-    );
-}
-
-function ViewTab({
-    active,
-    onClick,
-    children,
-}: {
-    active: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            className={`cursor-pointer rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                active ? 'bg-purple-600 text-white' : 'text-purple-300 hover:text-white'
-            }`}
-        >
-            {children}
-        </button>
     );
 }

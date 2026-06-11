@@ -19,7 +19,7 @@ import {
     type AppointmentStatus,
     type BusinessMemberRole,
 } from '@/db/schema';
-import { getClientsByEmployee } from './team-clients';
+import { getClientStats } from './team-clients';
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
 
@@ -83,49 +83,52 @@ beforeEach(async () => {
     mockGetCurrentUser.mockResolvedValue(null);
 });
 
-describe('getClientsByEmployee', () => {
+describe('getClientStats', () => {
     it('UNAUTHORIZED без сессии', async () => {
-        const r = await getClientsByEmployee('00000000-0000-0000-0000-000000000000');
+        const r = await getClientStats(
+            '00000000-0000-0000-0000-000000000000',
+            '00000000-0000-0000-0000-000000000000',
+        );
         expect(r.ok).toBe(false);
         if (r.ok) return;
         expect(r.code).toBe('UNAUTHORIZED');
     });
 
-    it('FORBIDDEN для EMPLOYEE (видит выручку — только владелец/менеджер)', async () => {
+    it('FORBIDDEN для EMPLOYEE (статистика с выручкой — только владелец/менеджер)', async () => {
         const owner = await makeUser('o@test.local');
         const worker = await makeUser('w@test.local');
         const biz = await makeBusiness(owner.id);
         await addMember(biz.id, worker.id, 'EMPLOYEE');
+        const client = await makeClient(biz.id, 'Анна', '+71111111111');
 
         await loginAs(worker);
-        const r = await getClientsByEmployee(biz.id);
+        const r = await getClientStats(biz.id, client.id);
         expect(r.ok).toBe(false);
         if (r.ok) return;
         expect(r.code).toBe('FORBIDDEN');
     });
 
-    it('менеджер имеет доступ', async () => {
+    it('NOT_FOUND для чужого клиента', async () => {
         const owner = await makeUser('o@test.local');
-        const manager = await makeUser('m@test.local');
         const biz = await makeBusiness(owner.id);
-        await addMember(biz.id, manager.id, 'MANAGER');
-
-        await loginAs(manager);
-        const r = await getClientsByEmployee(biz.id);
-        expect(r.ok).toBe(true);
+        await loginAs(owner);
+        const r = await getClientStats(biz.id, '00000000-0000-0000-0000-000000000000');
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('NOT_FOUND');
     });
 
-    it('группирует клиентов по сотруднику, считает визиты/выручку только по завершённым', async () => {
+    it('считает итого и разрез по сотрудникам только по завершённым', async () => {
         const owner = await makeUser('owner@test.local');
         const master = await makeUser('master@test.local');
         const biz = await makeBusiness(owner.id);
         await addMember(biz.id, master.id, 'EMPLOYEE');
-        const clientA = await makeClient(biz.id, 'Анна', '+71111111111');
+        const client = await makeClient(biz.id, 'Анна', '+71111111111');
 
-        // 2 завершённых + 1 отменённая (не считается) + 1 запланированная (визит не засчитан).
+        // У мастера: 2 завершённых (5000 + 3000), 1 отменённая (не в счёт), 1 будущая.
         await makeAppointment({
             businessId: biz.id,
-            clientId: clientA.id,
+            clientId: client.id,
             employeeUserId: master.id,
             startsAt: new Date('2026-06-01T09:00:00Z'),
             amount: 5000,
@@ -133,7 +136,7 @@ describe('getClientsByEmployee', () => {
         });
         await makeAppointment({
             businessId: biz.id,
-            clientId: clientA.id,
+            clientId: client.id,
             employeeUserId: master.id,
             startsAt: new Date('2026-06-10T09:00:00Z'),
             amount: 3000,
@@ -141,78 +144,40 @@ describe('getClientsByEmployee', () => {
         });
         await makeAppointment({
             businessId: biz.id,
-            clientId: clientA.id,
+            clientId: client.id,
             employeeUserId: master.id,
             startsAt: new Date('2026-06-20T09:00:00Z'),
             amount: 9999,
             status: 'cancelled',
         });
-        await makeAppointment({
-            businessId: biz.id,
-            clientId: clientA.id,
-            employeeUserId: master.id,
-            startsAt: new Date('2026-07-01T09:00:00Z'),
-            amount: 4000,
-            status: 'scheduled',
-        });
-
-        await loginAs(owner);
-        const r = await getClientsByEmployee(biz.id);
-        expect(r.ok).toBe(true);
-        if (!r.ok) return;
-
-        const masterGroup = r.data.find((g) => g.employee?.id === master.id);
-        expect(masterGroup).toBeDefined();
-        expect(masterGroup!.clients).toHaveLength(1);
-        const row = masterGroup!.clients[0];
-        expect(row.visits).toBe(2);
-        expect(row.revenue).toBe(8000);
-        expect(row.lastVisitAt?.toISOString()).toBe('2026-06-10T09:00:00.000Z');
-        expect(row.otherEmployees).toBe(false);
-
-        // Владелец без клиентов — присутствует как пустая группа.
-        const ownerGroup = r.data.find((g) => g.employee?.id === owner.id);
-        expect(ownerGroup).toBeDefined();
-        expect(ownerGroup!.clients).toHaveLength(0);
-    });
-
-    it('помечает otherEmployees, когда клиент ходит к нескольким сотрудникам', async () => {
-        const owner = await makeUser('owner@test.local');
-        const master = await makeUser('master@test.local');
-        const biz = await makeBusiness(owner.id);
-        await addMember(biz.id, master.id, 'EMPLOYEE');
-        const client = await makeClient(biz.id, 'Борис', '+72222222222');
-
-        // Один клиент у владельца и у мастера.
+        // У владельца: 1 завершённая (2000).
         await makeAppointment({
             businessId: biz.id,
             clientId: client.id,
             employeeUserId: owner.id,
-            startsAt: new Date('2026-06-01T09:00:00Z'),
-            amount: 1000,
-            status: 'completed',
-        });
-        await makeAppointment({
-            businessId: biz.id,
-            clientId: client.id,
-            employeeUserId: master.id,
-            startsAt: new Date('2026-06-02T09:00:00Z'),
+            startsAt: new Date('2026-06-15T09:00:00Z'),
             amount: 2000,
             status: 'completed',
         });
 
         await loginAs(owner);
-        const r = await getClientsByEmployee(biz.id);
+        const r = await getClientStats(biz.id, client.id);
         expect(r.ok).toBe(true);
         if (!r.ok) return;
 
-        const ownerRow = r.data.find((g) => g.employee?.id === owner.id)?.clients[0];
-        const masterRow = r.data.find((g) => g.employee?.id === master.id)?.clients[0];
-        expect(ownerRow?.otherEmployees).toBe(true);
-        expect(masterRow?.otherEmployees).toBe(true);
+        expect(r.data.client.name).toBe('Анна');
+        expect(r.data.totalVisits).toBe(3);
+        expect(r.data.totalRevenue).toBe(10000);
+        expect(r.data.lastVisitAt?.toISOString()).toBe('2026-06-15T09:00:00.000Z');
+
+        // Разрез по сотрудникам — оба сотрудника.
+        expect(r.data.byEmployee).toHaveLength(2);
+        const masterStat = r.data.byEmployee.find((e) => e.employee?.id === master.id);
+        expect(masterStat?.visits).toBe(2);
+        expect(masterStat?.revenue).toBe(8000);
     });
 
-    it('записи без сотрудника попадают в группу «Без сотрудника» (employee=null)', async () => {
+    it('записи без сотрудника попадают в строку employee=null', async () => {
         const owner = await makeUser('owner@test.local');
         const biz = await makeBusiness(owner.id);
         const client = await makeClient(biz.id, 'Вера', '+73333333333');
@@ -226,13 +191,12 @@ describe('getClientsByEmployee', () => {
         });
 
         await loginAs(owner);
-        const r = await getClientsByEmployee(biz.id);
+        const r = await getClientStats(biz.id, client.id);
         expect(r.ok).toBe(true);
         if (!r.ok) return;
 
-        const unassigned = r.data.find((g) => g.employee === null);
-        expect(unassigned).toBeDefined();
-        expect(unassigned!.clients[0].client.name).toBe('Вера');
-        expect(unassigned!.clients[0].visits).toBe(1);
+        expect(r.data.totalVisits).toBe(1);
+        expect(r.data.byEmployee).toHaveLength(1);
+        expect(r.data.byEmployee[0].employee).toBeNull();
     });
 });
