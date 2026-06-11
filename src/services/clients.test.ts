@@ -159,8 +159,12 @@ describe('listClients', () => {
             .insert(schema.clients)
             .values({ businessId: biz.id, name: 'Без мастера', phone: '+72' })
             .returning();
-        // Клиент без записей вообще — не должен попадать ни в один фильтр по сотруднику.
+        // Клиент без записей вообще — закреплённого сотрудника нет → «без сотрудника».
         await db.insert(schema.clients).values({ businessId: biz.id, name: 'Нет записей', phone: '+73' });
+        // Клиент в ЧС без записей — тоже «без сотрудника» и виден в общем списке.
+        await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'ЧС клиент', phone: '+75', isBlacklisted: true });
 
         const base = {
             businessId: biz.id,
@@ -200,15 +204,19 @@ describe('listClients', () => {
         if (!byMaster.ok) return;
         expect(byMaster.data.clients.map((c) => c.name)).toEqual(['К мастеру']);
 
+        // «Без сотрудника» = не закреплён ни за одним сотрудником: клиент с
+        // неназначенной записью, без записей вовсе и из ЧС. Не входит только «К мастеру».
         const unassigned = await listClients({ businessId: biz.id, employeeUserId: null });
         expect(unassigned.ok).toBe(true);
         if (!unassigned.ok) return;
-        expect(unassigned.data.clients.map((c) => c.name)).toEqual(['Без мастера']);
+        expect(unassigned.data.clients.map((c) => c.name).sort()).toEqual(
+            ['ЧС клиент', 'Без мастера', 'Нет записей', 'Только отмена'].sort(),
+        );
 
         const all = await listClients({ businessId: biz.id });
         expect(all.ok).toBe(true);
         if (!all.ok) return;
-        expect(all.data.total).toBe(4);
+        expect(all.data.total).toBe(5);
     });
 });
 
