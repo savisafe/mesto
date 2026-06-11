@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { DashboardStats } from '@/views/dashboard/DashboardStats';
+import { OwnerOnly } from '@/views/dashboard/OwnerOnly';
 import type { DashboardStats as DashboardStatsData } from '@/services/dashboard';
 
 interface Props {
@@ -23,27 +24,29 @@ export function DashboardView({ stats, userName }: Props) {
 
                 <DashboardStats stats={stats} />
 
-                <section className="mb-10">
-                    <SectionHeader title="Мои бизнесы" href="/my-business" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {stats.businesses.map((biz) => (
-                            <article
-                                key={biz.id}
-                                className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 hover:bg-white/10 transition"
-                            >
-                                <h3 className="text-white font-semibold text-lg mb-1">
-                                    {biz.name}
-                                </h3>
-                                {biz.description && (
-                                    <p className="text-purple-300 text-sm line-clamp-2">
-                                        {biz.description}
-                                    </p>
-                                )}
-                                <p className="text-purple-400 text-xs mt-3">Активен</p>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                <OwnerOnly>
+                    <section className="mb-10">
+                        <SectionHeader title="Мои бизнесы" href="/my-business" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {stats.businesses.map((biz) => (
+                                <article
+                                    key={biz.id}
+                                    className="bg-white/5 backdrop-blur border border-purple-700/40 rounded-2xl p-5 hover:bg-white/10 transition"
+                                >
+                                    <h3 className="text-white font-semibold text-lg mb-1">
+                                        {biz.name}
+                                    </h3>
+                                    {biz.description && (
+                                        <p className="text-purple-300 text-sm line-clamp-2">
+                                            {biz.description}
+                                        </p>
+                                    )}
+                                    <p className="text-purple-400 text-xs mt-3">Активен</p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+                </OwnerOnly>
                 {/*TODO подумать нужно или нет*/}
                 {/*<section>*/}
                 {/*    <SectionHeader title="Скоро" />*/}
