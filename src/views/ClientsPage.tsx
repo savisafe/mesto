@@ -5,6 +5,7 @@ import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { Button } from '@/ui/button/Button';
 import { TextField } from '@/ui/form';
 import { Modal } from '@/ui/modal/Modal';
+import { Select } from '@/ui/select/Select';
 import Spinner from '@/ui/spinner/Spinner';
 import { useAccess, useEffectiveRole } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
@@ -14,11 +15,17 @@ import {
     createClientAction,
     updateClientAction,
 } from '@/actions/clients';
+import { listMembersAction } from '@/actions/employees';
 import { ClientStatsModal } from '@/views/clients/ClientStatsModal';
+import type { Member } from '@/services/employees';
 import type { Client } from '@/db/schema';
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
+
+// Спец-значения фильтра по сотруднику (помимо id сотрудника).
+const FILTER_ALL = '';
+const FILTER_UNASSIGNED = 'none';
 
 export default function ClientsPage() {
     const access = useAccess();
@@ -26,9 +33,9 @@ export default function ClientsPage() {
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 
-    // Статистику клиента (визиты/выручка) видит только владелец бизнеса.
+    // Статистика клиента и фильтр по сотруднику — только у владельца бизнеса.
     // (ADMIN — глобальный платформенный супердоступ.)
-    const canSeeStats = role === 'OWNER' || role === 'ADMIN';
+    const isOwner = role === 'OWNER' || role === 'ADMIN';
     const [statsClient, setStatsClient] = useState<Client | null>(null);
 
     const [search, setSearch] = useState('');
@@ -37,6 +44,10 @@ export default function ClientsPage() {
     const [clients, setClients] = useState<Client[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
+
+    // Фильтр по сотруднику (только владелец): '' — все, 'none' — без сотрудника, иначе id.
+    const [members, setMembers] = useState<Member[]>([]);
+    const [employeeFilter, setEmployeeFilter] = useState<string>(FILTER_ALL);
 
     const [addOpen, setAddOpen] = useState(false);
     const [form, setForm] = useState({ name: '', phone: '', email: '', note: '' });
@@ -50,6 +61,13 @@ export default function ClientsPage() {
         return () => clearTimeout(id);
     }, [search]);
 
+    const employeeUserId =
+        !isOwner || employeeFilter === FILTER_ALL
+            ? undefined
+            : employeeFilter === FILTER_UNASSIGNED
+              ? null
+              : employeeFilter;
+
     const fetchClients = useCallback(async () => {
         if (!currentBusiness) return;
         setLoading(true);
@@ -59,6 +77,7 @@ export default function ClientsPage() {
                 search: debouncedSearch || undefined,
                 page,
                 perPage: PER_PAGE,
+                employeeUserId,
             });
             if (result.ok) {
                 setClients(result.data.clients);
@@ -69,7 +88,20 @@ export default function ClientsPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentBusiness, debouncedSearch, page, alert]);
+    }, [currentBusiness, debouncedSearch, page, employeeUserId, alert]);
+
+    // Список сотрудников для фильтра (только владелец). При смене бизнеса
+    // сбрасываем фильтр, чтобы не остаться с сотрудником из другого бизнеса.
+    useEffect(() => {
+        setEmployeeFilter(FILTER_ALL);
+        if (!isOwner || !currentBusiness) {
+            setMembers([]);
+            return;
+        }
+        listMembersAction(currentBusiness).then((result) => {
+            if (result.ok) setMembers(result.data.members);
+        });
+    }, [isOwner, currentBusiness]);
 
     useEffect(() => {
         fetchClients();
@@ -141,20 +173,38 @@ export default function ClientsPage() {
                     </div>
                 </div>
 
-                {canSeeStats && (
+                {isOwner && (
                     <p className="mb-4 text-purple-400 text-sm">
                         Нажмите на имя клиента, чтобы увидеть визиты и выручку.
                     </p>
                 )}
 
-                <div className="mb-6">
-                    <TextField
-                        type="search"
-                        placeholder="Поиск по имени или телефону"
-                        value={search}
-                        onChange={setSearch}
-                        inline
-                    />
+                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="flex-1">
+                        <TextField
+                            type="search"
+                            placeholder="Поиск по имени или телефону"
+                            value={search}
+                            onChange={setSearch}
+                            inline
+                        />
+                    </div>
+                    {isOwner && (
+                        <div className="sm:w-64">
+                            <Select
+                                value={employeeFilter}
+                                onChange={(v) => {
+                                    setEmployeeFilter(v);
+                                    setPage(1);
+                                }}
+                                options={[
+                                    { label: 'Все сотрудники', value: FILTER_ALL },
+                                    ...members.map((m) => ({ label: m.name, value: m.id })),
+                                    { label: 'Без сотрудника', value: FILTER_UNASSIGNED },
+                                ]}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="bg-purple-800 bg-opacity-30 border border-purple-700 rounded-lg overflow-x-auto">
@@ -193,7 +243,7 @@ export default function ClientsPage() {
                                         className={`border-t border-purple-700/30 ${client.isBlacklisted ? 'opacity-50' : ''}`}
                                     >
                                         <td className="px-4 py-3 text-white">
-                                            {canSeeStats ? (
+                                            {isOwner ? (
                                                 <button
                                                     onClick={() => setStatsClient(client)}
                                                     className="cursor-pointer text-left text-white underline decoration-purple-500/40 underline-offset-2 hover:decoration-white"
@@ -302,7 +352,7 @@ export default function ClientsPage() {
                     />
                 </Modal>
 
-                {canSeeStats && (
+                {isOwner && (
                     <ClientStatsModal
                         businessId={currentBusiness}
                         client={statsClient}

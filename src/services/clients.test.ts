@@ -37,6 +37,7 @@ async function loginAs(user: PublicUser) {
 }
 
 async function resetAll() {
+    await db.delete(schema.appointments);
     await db.delete(schema.clients);
     await db.delete(schema.businessMembers);
     await db.delete(schema.businesses);
@@ -140,6 +141,74 @@ describe('listClients', () => {
         expect(result.ok).toBe(true);
         if (!result.ok) return;
         expect(result.data.clients).toHaveLength(1);
+    });
+
+    it('фильтрует клиентов по сотруднику (employeeUserId)', async () => {
+        const owner = await makeUser('o@test.local');
+        const master = await makeUser('m@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db
+            .insert(schema.businessMembers)
+            .values({ businessId: biz.id, userId: master.id, role: 'EMPLOYEE' });
+
+        const [withMaster] = await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'К мастеру', phone: '+71' })
+            .returning();
+        const [unassignedClient] = await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'Без мастера', phone: '+72' })
+            .returning();
+        // Клиент без записей вообще — не должен попадать ни в один фильтр по сотруднику.
+        await db.insert(schema.clients).values({ businessId: biz.id, name: 'Нет записей', phone: '+73' });
+
+        const base = {
+            businessId: biz.id,
+            startsAt: new Date('2026-06-01T09:00:00Z'),
+            endsAt: new Date('2026-06-01T10:00:00Z'),
+            amount: 1000,
+            currency: 'KZT',
+        } as const;
+        await db.insert(schema.appointments).values({
+            ...base,
+            clientId: withMaster.id,
+            employeeUserId: master.id,
+            status: 'completed',
+        });
+        await db.insert(schema.appointments).values({
+            ...base,
+            clientId: unassignedClient.id,
+            employeeUserId: null,
+            status: 'scheduled',
+        });
+        // Отменённая запись к мастеру у «без записей» не должна его подтянуть.
+        const [noShow] = await db
+            .insert(schema.clients)
+            .values({ businessId: biz.id, name: 'Только отмена', phone: '+74' })
+            .returning();
+        await db.insert(schema.appointments).values({
+            ...base,
+            clientId: noShow.id,
+            employeeUserId: master.id,
+            status: 'cancelled',
+        });
+
+        await loginAs(owner);
+
+        const byMaster = await listClients({ businessId: biz.id, employeeUserId: master.id });
+        expect(byMaster.ok).toBe(true);
+        if (!byMaster.ok) return;
+        expect(byMaster.data.clients.map((c) => c.name)).toEqual(['К мастеру']);
+
+        const unassigned = await listClients({ businessId: biz.id, employeeUserId: null });
+        expect(unassigned.ok).toBe(true);
+        if (!unassigned.ok) return;
+        expect(unassigned.data.clients.map((c) => c.name)).toEqual(['Без мастера']);
+
+        const all = await listClients({ businessId: biz.id });
+        expect(all.ok).toBe(true);
+        if (!all.ok) return;
+        expect(all.data.total).toBe(4);
     });
 });
 
