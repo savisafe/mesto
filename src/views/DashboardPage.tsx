@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { LayoutPage } from '@/ui/layouts/LayoutPage';
 import { DashboardStats } from '@/views/dashboard/DashboardStats';
+import { OwnerOnly } from '@/views/dashboard/OwnerOnly';
 import type { DashboardStats as DashboardStatsData } from '@/services/dashboard';
 
 interface Props {
