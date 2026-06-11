@@ -6,7 +6,7 @@ import { Button } from '@/ui/button/Button';
 import { TextField } from '@/ui/form';
 import { Modal } from '@/ui/modal/Modal';
 import Spinner from '@/ui/spinner/Spinner';
-import { useAccess } from '@/hooks/useAccess';
+import { useAccess, useEffectiveRole } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import {
@@ -14,15 +14,23 @@ import {
     createClientAction,
     updateClientAction,
 } from '@/actions/clients';
+import { ClientsByEmployee } from '@/views/clients/ClientsByEmployee';
 import type { Client } from '@/db/schema';
+
+type ClientsView = 'all' | 'byEmployee';
 
 const PER_PAGE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ClientsPage() {
     const access = useAccess();
+    const { role } = useEffectiveRole();
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
+
+    // Разбивку «по сотрудникам» (с выручкой) видят только владелец/менеджер.
+    const canSeeByEmployee = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER';
+    const [view, setView] = useState<ClientsView>('all');
 
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -129,11 +137,31 @@ export default function ClientsPage() {
             <div className="max-w-6xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold text-white">Клиенты ({total})</h1>
-                    <div className="w-48">
-                        <Button onClick={() => setAddOpen(true)}>Добавить клиента</Button>
-                    </div>
+                    {view === 'all' && (
+                        <div className="w-48">
+                            <Button onClick={() => setAddOpen(true)}>Добавить клиента</Button>
+                        </div>
+                    )}
                 </div>
 
+                {canSeeByEmployee && (
+                    <div className="mb-6 inline-flex rounded-xl border border-purple-700/50 bg-purple-900/30 p-1">
+                        <ViewTab active={view === 'all'} onClick={() => setView('all')}>
+                            Все клиенты
+                        </ViewTab>
+                        <ViewTab
+                            active={view === 'byEmployee'}
+                            onClick={() => setView('byEmployee')}
+                        >
+                            По сотрудникам
+                        </ViewTab>
+                    </div>
+                )}
+
+                {view === 'byEmployee' ? (
+                    <ClientsByEmployee businessId={currentBusiness} />
+                ) : (
+                    <>
                 <div className="mb-6">
                     <TextField
                         type="search"
@@ -227,6 +255,8 @@ export default function ClientsPage() {
                         </button>
                     </div>
                 )}
+                    </>
+                )}
 
                 <Modal
                     open={addOpen}
@@ -279,5 +309,26 @@ export default function ClientsPage() {
                 </Modal>
             </div>
         </LayoutPage>
+    );
+}
+
+function ViewTab({
+    active,
+    onClick,
+    children,
+}: {
+    active: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
+    return (
+        <button
+            onClick={onClick}
+            className={`cursor-pointer rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                active ? 'bg-purple-600 text-white' : 'text-purple-300 hover:text-white'
+            }`}
+        >
+            {children}
+        </button>
     );
 }

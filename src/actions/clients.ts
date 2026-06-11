@@ -10,9 +10,20 @@ import {
     type CreateClientInput,
     type UpdateClientInput,
 } from '@/services/clients';
+import {
+    getClientsByEmployee,
+    type EmployeeClientsGroup,
+} from '@/services/team-clients';
 import type { Client } from '@/db/schema';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export async function getClientsByEmployeeAction(
+    businessId: string,
+): Promise<ActionResult<EmployeeClientsGroup[]>> {
+    const result = await getClientsByEmployee(businessId);
+    return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
+}
 
 export async function listClientsAction(
     input: ListClientsInput,
