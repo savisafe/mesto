@@ -94,18 +94,31 @@ describe('getClientStats', () => {
         expect(r.code).toBe('UNAUTHORIZED');
     });
 
-    it('FORBIDDEN для EMPLOYEE (статистика с выручкой — только владелец/менеджер)', async () => {
+    it('FORBIDDEN для участников — статистика только у владельца', async () => {
         const owner = await makeUser('o@test.local');
-        const worker = await makeUser('w@test.local');
+        const employee = await makeUser('e@test.local');
+        const manager = await makeUser('m@test.local');
         const biz = await makeBusiness(owner.id);
-        await addMember(biz.id, worker.id, 'EMPLOYEE');
+        await addMember(biz.id, employee.id, 'EMPLOYEE');
+        await addMember(biz.id, manager.id, 'MANAGER');
         const client = await makeClient(biz.id, 'Анна', '+71111111111');
 
-        await loginAs(worker);
+        for (const u of [employee, manager]) {
+            await loginAs(u);
+            const r = await getClientStats(biz.id, client.id);
+            expect(r.ok).toBe(false);
+            if (r.ok) return;
+            expect(r.code).toBe('FORBIDDEN');
+        }
+    });
+
+    it('владелец имеет доступ', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        const client = await makeClient(biz.id, 'Анна', '+71111111111');
+        await loginAs(owner);
         const r = await getClientStats(biz.id, client.id);
-        expect(r.ok).toBe(false);
-        if (r.ok) return;
-        expect(r.code).toBe('FORBIDDEN');
+        expect(r.ok).toBe(true);
     });
 
     it('NOT_FOUND для чужого клиента', async () => {
