@@ -54,9 +54,7 @@ export function DashboardView({ stats, userName }: Props) {
                                         {biz.description}
                                     </p>
                                 )}
-                                <p className="text-purple-400 text-xs mt-3">
-                                    {biz.isActive ? 'Активен' : 'Неактивен'}
-                                </p>
+                                <p className="text-purple-400 text-xs mt-3">Активен</p>
                             </article>
                         ))}
                     </div>

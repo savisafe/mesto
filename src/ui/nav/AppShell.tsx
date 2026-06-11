@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/routes/routes';
@@ -31,14 +31,21 @@ export const AppShell = ({ children, isTelegramEnabled }: AppShellProps) => {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    // Кнопку «Назад» показываем только когда внутри приложения уже была хотя бы
+    // одна навигация — иначе router.back() увёл бы пользователя за пределы PWA.
+    const navCountRef = useRef(0);
+    const [canGoBack, setCanGoBack] = useState(false);
 
     useEffect(() => {
         setCollapsed(localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1');
     }, []);
 
-    // Закрываем мобильное меню при переходе на другую страницу.
+    // Закрываем мобильное меню при переходе на другую страницу и отмечаем,
+    // что в истории появился предыдущий экран.
     useEffect(() => {
         setMobileNavOpen(false);
+        navCountRef.current += 1;
+        if (navCountRef.current > 1) setCanGoBack(true);
     }, [pathname]);
 
     const handleToggleCollapsed = () => {
@@ -67,7 +74,7 @@ export const AppShell = ({ children, isTelegramEnabled }: AppShellProps) => {
             <Sidebar collapsed={collapsed} onToggleCollapsed={handleToggleCollapsed} />
             <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
             <div className="flex min-w-0 flex-1 flex-col">
-                <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
+                <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} canGoBack={canGoBack} />
                 <EmailVerifyBanner isTelegramEnabled={isTelegramEnabled} />
                 <main className="flex-1">{children}</main>
             </div>
