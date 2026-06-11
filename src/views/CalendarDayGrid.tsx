@@ -151,7 +151,8 @@ export default function CalendarDayGrid({
     onApptClick,
 }: {
     data: CalendarDayData;
-    onSlotClick: (employeeId: ColumnId, startsAt: Date) => void;
+    // Не задан — клик по пустому слоту отключён (нет прав на создание записи).
+    onSlotClick?: (employeeId: ColumnId, startsAt: Date) => void;
     onApptClick: (apt: AppointmentDetail) => void;
 }) {
     const dayStartMs = useMemo(() => ms(data.dayStart), [data.dayStart]);
@@ -243,6 +244,7 @@ export default function CalendarDayGrid({
     };
 
     const handleColumnClick = (colId: ColumnId, e: React.MouseEvent<HTMLDivElement>) => {
+        if (!onSlotClick) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const y = e.clientY - rect.top;
         let minute = lo + y / PX_PER_MIN;
@@ -350,12 +352,14 @@ export default function CalendarDayGrid({
                                             );
                                         })}
 
-                                        {/* Клик-слой для создания записи */}
-                                        <div
-                                            className="absolute inset-0 cursor-pointer"
-                                            onClick={(e) => handleColumnClick(col.id, e)}
-                                            title="Нажмите, чтобы создать запись"
-                                        />
+                                        {/* Клик-слой для создания записи (только если есть права) */}
+                                        {onSlotClick && (
+                                            <div
+                                                className="absolute inset-0 cursor-pointer"
+                                                onClick={(e) => handleColumnClick(col.id, e)}
+                                                title="Нажмите, чтобы создать запись"
+                                            />
+                                        )}
 
                                         {/* Блоки сотрудника */}
                                         {colBlocks.map((b) => {

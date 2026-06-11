@@ -81,6 +81,72 @@ beforeEach(async () => {
     mockGetCurrentUser.mockResolvedValue(null);
 });
 
+describe('доступ по роли: создание записи и видимость телефона', () => {
+    it('createAppointment запрещён для EMPLOYEE (FORBIDDEN)', async () => {
+        const owner = await makeUser('owner@test.local');
+        const employee = await makeUser('emp@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db
+            .insert(schema.businessMembers)
+            .values({ businessId: biz.id, userId: employee.id, role: 'EMPLOYEE' });
+        const client = await makeClient(biz.id);
+        const svc = await makeService(biz.id);
+
+        await loginAs(employee);
+        const r = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            serviceId: svc.id,
+            startsAt: new Date('2026-06-10T09:00:00Z'),
+            durationMinutes: svc.durationMinutes,
+        });
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('FORBIDDEN');
+    });
+
+    it('listAppointments скрывает телефон клиента от EMPLOYEE, показывает владельцу', async () => {
+        const owner = await makeUser('owner@test.local');
+        const employee = await makeUser('emp@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db
+            .insert(schema.businessMembers)
+            .values({ businessId: biz.id, userId: employee.id, role: 'EMPLOYEE' });
+        const client = await makeClient(biz.id, 'Анна', '+79990001122');
+        const svc = await makeService(biz.id);
+
+        await loginAs(owner);
+        const created = await createAppointment({
+            businessId: biz.id,
+            clientId: client.id,
+            serviceId: svc.id,
+            startsAt: new Date('2026-06-10T09:00:00Z'),
+            durationMinutes: svc.durationMinutes,
+        });
+        expect(created.ok).toBe(true);
+
+        const window = {
+            businessId: biz.id,
+            from: new Date('2026-06-10T00:00:00Z'),
+            to: new Date('2026-06-11T00:00:00Z'),
+        };
+
+        await loginAs(owner);
+        const asOwner = await listAppointments(window);
+        expect(asOwner.ok).toBe(true);
+        if (!asOwner.ok) return;
+        expect(asOwner.data[0].client.phone).toBe('+79990001122');
+
+        await loginAs(employee);
+        const asEmployee = await listAppointments(window);
+        expect(asEmployee.ok).toBe(true);
+        if (!asEmployee.ok) return;
+        expect(asEmployee.data[0].client.phone).toBe('');
+        // Имя при этом остаётся видимым.
+        expect(asEmployee.data[0].client.name).toBe('Анна');
+    });
+});
+
 describe('createAppointment', () => {
     it('UNAUTHORIZED без сессии', async () => {
         const r = await createAppointment({

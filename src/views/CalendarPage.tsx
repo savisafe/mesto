@@ -12,7 +12,7 @@ import {
     DurationField,
 } from '@/ui/form';
 import Spinner from '@/ui/spinner/Spinner';
-import { useAccess } from '@/hooks/useAccess';
+import { useAccess, useEffectiveRole } from '@/hooks/useAccess';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import {
@@ -43,8 +43,12 @@ interface CreatePrefill {
 
 export default function CalendarPage() {
     const access = useAccess();
+    const { role } = useEffectiveRole();
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
+
+    // Управление (услуги, создание записи) — владелец/менеджер; сотрудник — нет.
+    const canManage = role === 'OWNER' || role === 'MANAGER' || role === 'ADMIN';
 
     const [date, setDate] = useState(() => toLocalDateString(new Date()));
     const [calendar, setCalendar] = useState<CalendarDayData | null>(null);
@@ -148,17 +152,19 @@ export default function CalendarPage() {
                             {formatDateHeader(date)}
                         </h1>
                     </div>
-                    <div className="flex gap-2 items-center">
-                        <button
-                            onClick={() => setServicesOpen(true)}
-                            className="text-sm text-purple-300 hover:text-white cursor-pointer px-3 py-2"
-                        >
-                            Услуги ({services.length})
-                        </button>
-                        <div className="w-48">
-                            <Button onClick={() => openCreate(null)}>Новая запись</Button>
+                    {canManage && (
+                        <div className="flex gap-2 items-center">
+                            <button
+                                onClick={() => setServicesOpen(true)}
+                                className="text-sm text-purple-300 hover:text-white cursor-pointer px-3 py-2"
+                            >
+                                Услуги ({services.length})
+                            </button>
+                            <div className="w-48">
+                                <Button onClick={() => openCreate(null)}>Новая запись</Button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </header>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -166,7 +172,7 @@ export default function CalendarPage() {
                     <Legend />
                 </div>
 
-                {(services.length === 0 || clients.length === 0) && (
+                {canManage && (services.length === 0 || clients.length === 0) && (
                     <OnboardingHint services={services} />
                 )}
 
@@ -179,8 +185,11 @@ export default function CalendarPage() {
                         <div className={loading ? 'opacity-60 transition' : 'transition'}>
                             <CalendarDayGrid
                                 data={calendar}
-                                onSlotClick={(employeeId, startsAt) =>
-                                    openCreate({ employeeId, startsAt })
+                                onSlotClick={
+                                    canManage
+                                        ? (employeeId, startsAt) =>
+                                              openCreate({ employeeId, startsAt })
+                                        : undefined
                                 }
                                 onApptClick={setSelectedAppt}
                             />
@@ -383,7 +392,8 @@ function AppointmentDetailModal({
                 </Row>
                 <Row label="Услуга">{apt.service?.name ?? 'Без услуги'}</Row>
                 <Row label="Клиент">
-                    {apt.client.name} · {apt.client.phone}
+                    {apt.client.name}
+                    {apt.client.phone && ` · ${apt.client.phone}`}
                 </Row>
                 <Row label="Сотрудник">{apt.employee?.name ?? 'Не назначен'}</Row>
                 {apt.amount > 0 && <Row label="Цена">{formatMoney(apt.amount, apt.currency)}</Row>}
@@ -539,7 +549,10 @@ function CreateAppointmentDialog({
                 label="Клиент"
                 value={clientId}
                 onChange={setClientId}
-                options={clients.map((c) => ({ value: c.id, label: `${c.name} (${c.phone})` }))}
+                options={clients.map((c) => ({
+                    value: c.id,
+                    label: c.phone ? `${c.name} (${c.phone})` : c.name,
+                }))}
             />
             <SelectField
                 label="Сотрудник"
