@@ -10,6 +10,7 @@ import {
     type NewClient,
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
+import { getBusinessRole, isOwnerOrManager } from './_access';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -87,8 +88,10 @@ export async function listClients(
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
 
-    const hasAccess = await checkBusinessAccess(input.businessId, user.id);
-    if (!hasAccess) return FORBIDDEN;
+    const role = await getBusinessRole(input.businessId, user.id);
+    if (!role) return FORBIDDEN;
+    // Телефон клиента — только владельцу/менеджеру. Сотруднику отдаём пустым.
+    const hidePhone = !isOwnerOrManager(role);
 
     const page = Math.max(1, input.page ?? 1);
     const perPage = Math.min(MAX_PER_PAGE, Math.max(1, input.perPage ?? DEFAULT_PER_PAGE));
@@ -147,9 +150,11 @@ export async function listClients(
         db.select({ count: sql<number>`count(*)::int` }).from(clients).where(where),
     ]);
 
+    const data = hidePhone ? rows.map((c) => ({ ...c, phone: '' })) : rows;
+
     return {
         ok: true,
-        data: { clients: rows, total: count.count, page, perPage },
+        data: { clients: data, total: count.count, page, perPage },
     };
 }
 
