@@ -11,17 +11,18 @@ import {
     type UpdateClientInput,
 } from '@/services/clients';
 import {
-    getClientsByEmployee,
-    type EmployeeClientsGroup,
+    getClientStats,
+    type ClientStats,
 } from '@/services/team-clients';
 import type { Client } from '@/db/schema';
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-export async function getClientsByEmployeeAction(
+export async function getClientStatsAction(
     businessId: string,
-): Promise<ActionResult<EmployeeClientsGroup[]>> {
-    const result = await getClientsByEmployee(businessId);
+    clientId: string,
+): Promise<ActionResult<ClientStats>> {
+    const result = await getClientStats(businessId, clientId);
     return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error };
 }
 
