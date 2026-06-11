@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, or, ilike, inArray, isNull, ne, sql, desc } from 'drizzle-orm';
+import { and, eq, or, ilike, inArray, notInArray, isNotNull, ne, sql, desc } from 'drizzle-orm';
 import { db } from '@/db';
 import {
     clients,
@@ -21,7 +21,8 @@ export interface ListClientsInput {
     page?: number;
     perPage?: number;
     // Фильтр по сотруднику: id — клиенты с записями к этому сотруднику;
-    // null — клиенты с записями без сотрудника; undefined — без фильтра.
+    // null — клиенты без закреплённого сотрудника (в т.ч. без записей и в ЧС);
+    // undefined — без фильтра.
     employeeUserId?: string | null;
 }
 
@@ -102,13 +103,24 @@ export async function listClients(
         );
     }
 
-    // Фильтр по сотруднику: оставляем клиентов, у которых есть неотменённые
-    // записи к выбранному сотруднику (или без сотрудника, если null).
-    if (input.employeeUserId !== undefined) {
-        const employeeCond =
-            input.employeeUserId === null
-                ? isNull(appointments.employeeUserId)
-                : eq(appointments.employeeUserId, input.employeeUserId);
+    // Фильтр по сотруднику.
+    if (input.employeeUserId === null) {
+        // «Без сотрудника» = клиент не закреплён ни за одним сотрудником:
+        // нет ни одной неотменённой записи с назначенным сотрудником. Сюда
+        // попадают и клиенты без записей вовсе, и из ЧС (у них обычно нет записей).
+        const clientsWithEmployee = db
+            .selectDistinct({ id: appointments.clientId })
+            .from(appointments)
+            .where(
+                and(
+                    eq(appointments.businessId, input.businessId),
+                    ne(appointments.status, 'cancelled'),
+                    isNotNull(appointments.employeeUserId),
+                ),
+            );
+        conditions.push(notInArray(clients.id, clientsWithEmployee));
+    } else if (input.employeeUserId !== undefined) {
+        // Конкретный сотрудник: клиенты с неотменёнными записями к нему.
         const clientIdsForEmployee = db
             .selectDistinct({ id: appointments.clientId })
             .from(appointments)
@@ -116,7 +128,7 @@ export async function listClients(
                 and(
                     eq(appointments.businessId, input.businessId),
                     ne(appointments.status, 'cancelled'),
-                    employeeCond,
+                    eq(appointments.employeeUserId, input.employeeUserId),
                 ),
             );
         conditions.push(inArray(clients.id, clientIdsForEmployee));
