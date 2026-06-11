@@ -46,6 +46,15 @@ export interface ListMembersResult {
     isOwner: boolean;
 }
 
+async function userExistsByEmail(email: string): Promise<boolean> {
+    const [u] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+    return Boolean(u);
+}
+
 async function getBusinessAccess(
     businessId: string,
     userId: string,
@@ -216,11 +225,36 @@ export async function inviteMember(
         })
         .returning();
 
-    void sendInviteEmail(email, biz.name, me.name, token).catch((err) => {
+    // Незарегистрированному ведём ссылку на регистрацию, существующему — на вход.
+    const recipientExists = await userExistsByEmail(email);
+    void sendInviteEmail(email, biz.name, me.name, token, recipientExists).catch((err) => {
         console.error('Failed to send invite email:', err);
     });
 
     return { ok: true, data: { id: created.id, email: created.email } };
+}
+
+// Для редиректа из /api/invites/<token>, когда пользователь не авторизован:
+// нужно понять, на регистрацию его вести или на вход. Возвращает email
+// приглашения и наличие аккаунта; null — если токен невалиден/истёк.
+export async function getInviteSignInTarget(
+    token: string,
+): Promise<{ email: string; userExists: boolean } | null> {
+    const tokenHash = sha256(token);
+    const [inv] = await db
+        .select({ email: invites.email })
+        .from(invites)
+        .where(
+            and(
+                eq(invites.tokenHash, tokenHash),
+                isNull(invites.acceptedAt),
+                isNull(invites.revokedAt),
+                gt(invites.expiresAt, new Date()),
+            ),
+        )
+        .limit(1);
+    if (!inv) return null;
+    return { email: inv.email, userExists: await userExistsByEmail(inv.email) };
 }
 
 export async function revokeInvite(id: string): Promise<ServiceResult<{ id: string }>> {

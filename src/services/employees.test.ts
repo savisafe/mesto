@@ -26,6 +26,7 @@ import {
     revokeInvite,
     acceptInvite,
     removeMember,
+    getInviteSignInTarget,
 } from './employees';
 
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
@@ -186,6 +187,31 @@ describe('inviteMember', () => {
         expect(stored[0].role).toBe('MANAGER');
     });
 
+    it('незарегистрированному шлёт ссылку на регистрацию (userExists=false)', async () => {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        await loginAs(owner);
+
+        await inviteMember({ businessId: biz.id, email: 'newbie@test.local', role: 'EMPLOYEE' });
+        await new Promise((res) => setImmediate(res));
+
+        expect(mockSendInvite).toHaveBeenCalledOnce();
+        expect(mockSendInvite.mock.calls[0][4]).toBe(false);
+    });
+
+    it('существующему пользователю шлёт ссылку на вход (userExists=true)', async () => {
+        const owner = await makeUser('o@test.local');
+        await makeUser('known@test.local');
+        const biz = await makeBusiness(owner.id);
+        await loginAs(owner);
+
+        await inviteMember({ businessId: biz.id, email: 'known@test.local', role: 'EMPLOYEE' });
+        await new Promise((res) => setImmediate(res));
+
+        expect(mockSendInvite).toHaveBeenCalledOnce();
+        expect(mockSendInvite.mock.calls[0][4]).toBe(true);
+    });
+
     it('нельзя пригласить самого себя', async () => {
         const owner = await makeUser('o@test.local');
         const biz = await makeBusiness(owner.id);
@@ -320,6 +346,35 @@ describe('acceptInvite', () => {
         await acceptInvite(token);
         const second = await acceptInvite(token);
         expect(second.ok).toBe(false);
+    });
+});
+
+describe('getInviteSignInTarget', () => {
+    async function makeInviteToken(email: string): Promise<string> {
+        const owner = await makeUser('o@test.local');
+        const biz = await makeBusiness(owner.id);
+        await loginAs(owner);
+        await inviteMember({ businessId: biz.id, email, role: 'EMPLOYEE' });
+        await new Promise((r) => setImmediate(r));
+        return mockSendInvite.mock.calls[0][3];
+    }
+
+    it('null для невалидного токена', async () => {
+        const r = await getInviteSignInTarget('not-a-real-token');
+        expect(r).toBeNull();
+    });
+
+    it('userExists=false, если аккаунта по email ещё нет', async () => {
+        const token = await makeInviteToken('newbie@test.local');
+        const r = await getInviteSignInTarget(token);
+        expect(r).toEqual({ email: 'newbie@test.local', userExists: false });
+    });
+
+    it('userExists=true, если аккаунт по email существует', async () => {
+        await makeUser('known@test.local');
+        const token = await makeInviteToken('known@test.local');
+        const r = await getInviteSignInTarget(token);
+        expect(r).toEqual({ email: 'known@test.local', userExists: true });
     });
 });
 

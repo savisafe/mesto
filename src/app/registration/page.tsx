@@ -1,5 +1,10 @@
-import RegistrationPage from "@/views/RegistrationPage";
+import { Suspense } from 'react';
+import RegistrationPage from '@/views/RegistrationPage';
 
 export default function Page() {
-    return <RegistrationPage/>;
+    return (
+        <Suspense fallback={null}>
+            <RegistrationPage />
+        </Suspense>
+    );
 }
