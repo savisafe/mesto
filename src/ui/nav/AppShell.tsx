@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { routes } from '@/routes/routes';
@@ -8,6 +8,7 @@ import { Footer } from '@/ui/footer/Footer';
 import { EmailVerifyBanner } from '@/ui/auth/EmailVerifyBanner';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
+import { BottomNav } from './BottomNav';
 import { Topbar } from './Topbar';
 import { PublicHeader } from './PublicHeader';
 
@@ -31,21 +32,14 @@ export const AppShell = ({ children, isTelegramEnabled }: AppShellProps) => {
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
-    // Кнопку «Назад» показываем только когда внутри приложения уже была хотя бы
-    // одна навигация — иначе router.back() увёл бы пользователя за пределы PWA.
-    const navCountRef = useRef(0);
-    const [canGoBack, setCanGoBack] = useState(false);
 
     useEffect(() => {
         setCollapsed(localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1');
     }, []);
 
-    // Закрываем мобильное меню при переходе на другую страницу и отмечаем,
-    // что в истории появился предыдущий экран.
+    // Закрываем мобильное меню при переходе на другую страницу.
     useEffect(() => {
         setMobileNavOpen(false);
-        navCountRef.current += 1;
-        if (navCountRef.current > 1) setCanGoBack(true);
     }, [pathname]);
 
     const handleToggleCollapsed = () => {
@@ -74,10 +68,15 @@ export const AppShell = ({ children, isTelegramEnabled }: AppShellProps) => {
             <Sidebar collapsed={collapsed} onToggleCollapsed={handleToggleCollapsed} />
             <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
             <div className="flex min-w-0 flex-1 flex-col">
-                <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} canGoBack={canGoBack} />
+                <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
                 <EmailVerifyBanner isTelegramEnabled={isTelegramEnabled} />
-                <main className="flex-1">{children}</main>
+                {/* Снизу на мобильном — таб-панель (fixed), поэтому добавляем отступ,
+                    чтобы контент не уезжал под неё. На desktop таб-панели нет. */}
+                <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+                    {children}
+                </main>
             </div>
+            <BottomNav onOpenMore={() => setMobileNavOpen(true)} />
         </div>
     );
 };
