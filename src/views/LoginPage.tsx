@@ -9,13 +9,14 @@ import { Button } from '@/ui/button/Button';
 import { Popup } from '@/ui/popup/Popup';
 import { useNotification } from '@/contexts/NotificationContext';
 import { loginAction } from '@/actions/auth';
-import { routes } from '@/routes/routes';
+import { routes, authPathWithParams } from '@/routes/routes';
 
 export default function LoginPage() {
     const alert = useNotification();
     const searchParams = useSearchParams();
     const next = searchParams?.get('next') ?? undefined;
-    const [email, setEmail] = useState('');
+    const invitedEmail = searchParams?.get('email') ?? '';
+    const [email, setEmail] = useState(invitedEmail);
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -76,7 +77,10 @@ export default function LoginPage() {
                 <Link href={routes.LOGIN_OTP} className="underline hover:text-purple-300">
                     Быстрый вход
                 </Link>
-                <Link href={routes.REGISTRATION} className="underline hover:text-purple-300">
+                <Link
+                    href={authPathWithParams(routes.REGISTRATION, { next, email: invitedEmail })}
+                    className="underline hover:text-purple-300"
+                >
                     Регистрация
                 </Link>
             </motion.div>
