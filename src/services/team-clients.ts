@@ -42,7 +42,7 @@ interface AggRow {
 }
 
 // Статистика по клиенту: визиты, последний визит, выручка — всего и по
-// сотрудникам. Видна только владельцу/менеджеру (показывает выручку).
+// сотрудникам. Видна только владельцу бизнеса (показывает выручку).
 export async function getClientStats(
     businessId: string,
     clientId: string,
@@ -51,7 +51,7 @@ export async function getClientStats(
     if (!user) return UNAUTHORIZED;
 
     const role = await getBusinessRole(businessId, user.id);
-    if (role !== 'OWNER' && role !== 'MANAGER') return FORBIDDEN;
+    if (role !== 'OWNER') return FORBIDDEN;
 
     const [client] = await db
         .select({ id: clients.id, name: clients.name, phone: clients.phone })

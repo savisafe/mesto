@@ -26,8 +26,9 @@ export default function ClientsPage() {
     const { currentBusiness } = useBusiness();
     const alert = useNotification();
 
-    // Статистику клиента (визиты/выручка) видят только владелец/менеджер.
-    const canSeeStats = role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER';
+    // Статистику клиента (визиты/выручка) видит только владелец бизнеса.
+    // (ADMIN — глобальный платформенный супердоступ.)
+    const canSeeStats = role === 'OWNER' || role === 'ADMIN';
     const [statsClient, setStatsClient] = useState<Client | null>(null);
 
     const [search, setSearch] = useState('');
