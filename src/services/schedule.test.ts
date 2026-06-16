@@ -139,10 +139,13 @@ describe('addTimeOff / removeTimeOff', () => {
         const biz = await makeBusiness(owner.id);
         mockGetCurrentUser.mockResolvedValue(owner);
 
+        // Блок должен быть в будущем: getSchedule отдаёт только endsAt >= now.
+        const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
         const add = await addTimeOff({
             businessId: biz.id,
-            startsAt: new Date('2026-06-15T10:00:00Z'),
-            endsAt: new Date('2026-06-15T11:00:00Z'),
+            startsAt,
+            endsAt,
             reason: 'lunch',
         });
         expect(add.ok).toBe(true);
@@ -185,5 +188,71 @@ describe('addTimeOff / removeTimeOff', () => {
         const r = await removeTimeOff(other.id, add.data.id);
         expect(r.ok).toBe(false);
         if (!r.ok) expect(r.code).toBe('NOT_FOUND');
+    });
+});
+
+describe('гейтинг по роли (сервер)', () => {
+    async function addMember(businessId: string, userId: string, role: 'MANAGER' | 'EMPLOYEE') {
+        await db.insert(schema.businessMembers).values({ businessId, userId, role });
+    }
+
+    it('EMPLOYEE не может менять график (setWeeklyHours → FORBIDDEN)', async () => {
+        const owner = await makeUser('o@t.local');
+        const emp = await makeUser('e@t.local');
+        const biz = await makeBusiness(owner.id);
+        await addMember(biz.id, emp.id, 'EMPLOYEE');
+        mockGetCurrentUser.mockResolvedValue(emp);
+
+        const days = weekTemplate();
+        days[1] = { weekday: 1, enabled: true, startMinute: 600, endMinute: 720 };
+        const r = await setWeeklyHours(biz.id, days);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.code).toBe('FORBIDDEN');
+    });
+
+    it('EMPLOYEE не может добавлять/удалять блоки (→ FORBIDDEN)', async () => {
+        const owner = await makeUser('o@t.local');
+        const emp = await makeUser('e@t.local');
+        const biz = await makeBusiness(owner.id);
+        await addMember(biz.id, emp.id, 'EMPLOYEE');
+
+        const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const endsAt = new Date(startsAt.getTime() + 60 * 60 * 1000);
+
+        mockGetCurrentUser.mockResolvedValue(owner);
+        const add = await addTimeOff({ businessId: biz.id, startsAt, endsAt });
+        if (!add.ok) throw new Error('setup');
+
+        mockGetCurrentUser.mockResolvedValue(emp);
+        const empAdd = await addTimeOff({ businessId: biz.id, startsAt, endsAt });
+        expect(empAdd.ok).toBe(false);
+        if (!empAdd.ok) expect(empAdd.code).toBe('FORBIDDEN');
+
+        const empRem = await removeTimeOff(biz.id, add.data.id);
+        expect(empRem.ok).toBe(false);
+        if (!empRem.ok) expect(empRem.code).toBe('FORBIDDEN');
+    });
+
+    it('EMPLOYEE может читать график (getSchedule → ok)', async () => {
+        const owner = await makeUser('o@t.local');
+        const emp = await makeUser('e@t.local');
+        const biz = await makeBusiness(owner.id);
+        await addMember(biz.id, emp.id, 'EMPLOYEE');
+        mockGetCurrentUser.mockResolvedValue(emp);
+        const r = await getSchedule(biz.id);
+        expect(r.ok).toBe(true);
+        if (r.ok) expect(r.data.isOwner).toBe(false);
+    });
+
+    it('MANAGER может менять график (setWeeklyHours → ok)', async () => {
+        const owner = await makeUser('o@t.local');
+        const mgr = await makeUser('m@t.local');
+        const biz = await makeBusiness(owner.id);
+        await addMember(biz.id, mgr.id, 'MANAGER');
+        mockGetCurrentUser.mockResolvedValue(mgr);
+        const days = weekTemplate();
+        days[1] = { weekday: 1, enabled: true, startMinute: 600, endMinute: 720 };
+        const r = await setWeeklyHours(biz.id, days);
+        expect(r.ok).toBe(true);
     });
 });

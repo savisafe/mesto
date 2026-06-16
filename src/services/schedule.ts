@@ -9,7 +9,7 @@ import {
     type TimeOffReason,
 } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
-import { checkBusinessAccess } from './_access';
+import { getBusinessRole, isOwnerOrManager } from './_access';
 
 export type ServiceResult<T> =
     | { ok: true; data: T }
@@ -47,9 +47,9 @@ export interface ScheduleData {
 async function access(businessId: string) {
     const me = await getCurrentUser();
     if (!me) return { kind: 'unauth' as const };
-    const role = await checkBusinessAccess(businessId, me.id);
+    const role = await getBusinessRole(businessId, me.id);
     if (!role) return { kind: 'forbidden' as const };
-    return { kind: 'ok' as const, isOwner: role === 'OWNER' };
+    return { kind: 'ok' as const, role, isOwner: role === 'OWNER' };
 }
 
 export async function getSchedule(businessId: string): Promise<ServiceResult<ScheduleData>> {
@@ -112,6 +112,8 @@ export async function setWeeklyHours(
     const a = await access(businessId);
     if (a.kind === 'unauth') return UNAUTHORIZED;
     if (a.kind === 'forbidden') return FORBIDDEN;
+    // Менять график бизнеса может только владелец/менеджер.
+    if (!isOwnerOrManager(a.role)) return FORBIDDEN;
 
     for (const d of days) {
         if (!d.enabled) continue;
@@ -161,6 +163,7 @@ export async function addTimeOff(input: AddTimeOffInput): Promise<ServiceResult<
     const a = await access(input.businessId);
     if (a.kind === 'unauth') return UNAUTHORIZED;
     if (a.kind === 'forbidden') return FORBIDDEN;
+    if (!isOwnerOrManager(a.role)) return FORBIDDEN;
 
     if (
         !(input.startsAt instanceof Date) ||
@@ -204,6 +207,7 @@ export async function removeTimeOff(
     const a = await access(businessId);
     if (a.kind === 'unauth') return UNAUTHORIZED;
     if (a.kind === 'forbidden') return FORBIDDEN;
+    if (!isOwnerOrManager(a.role)) return FORBIDDEN;
 
     const [block] = await db
         .select({ id: timeOff.id })
