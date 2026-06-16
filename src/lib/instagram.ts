@@ -1,31 +1,21 @@
 // Безопасная обработка Instagram на публичной странице.
 //
-// Виджет (SnapWidget/LightWidget): мы НЕ инжектим сырой HTML/скрипты владельца
-// (XSS). Принимаем embed-код, прямой URL или короткий ID виджета SnapWidget и
-// пропускаем только https-iframe с разрешённого хоста.
+// Виджет (LightWidget): мы НЕ инжектим сырой HTML/скрипты владельца (XSS).
+// Принимаем embed-код или прямой URL и пропускаем только https-iframe
+// с разрешённого хоста.
 //
 // Ник: нормализуем «@nick», «nick» или ссылку на профиль до чистого ника.
 
-const ALLOWED_HOSTS = new Set([
-    'snapwidget.com',
-    'www.snapwidget.com',
-    'lightwidget.com',
-    'cdn.lightwidget.com',
-]);
+const ALLOWED_HOSTS = new Set(['lightwidget.com', 'cdn.lightwidget.com']);
 
 /**
- * Принимает embed-код (`<iframe src="...">`), прямой URL или короткий числовой
- * ID виджета SnapWidget. Возвращает безопасный https-URL встраивания с
- * разрешённого хоста или null, если вход некорректен/хост не в allowlist.
+ * Принимает embed-код (`<iframe src="...">`) или прямой URL виджета LightWidget.
+ * Возвращает безопасный https-URL встраивания с разрешённого хоста или null,
+ * если вход некорректен/хост не в allowlist.
  */
 export function normalizeInstagramWidgetUrl(input: string): string | null {
     const trimmed = input.trim();
     if (!trimmed) return null;
-
-    // Короткий ID виджета SnapWidget (только цифры) — собираем embed-URL сами.
-    if (/^\d{3,15}$/.test(trimmed)) {
-        return `https://snapwidget.com/embed/${trimmed}`;
-    }
 
     const srcMatch = trimmed.match(/src\s*=\s*["']([^"']+)["']/i);
     const candidate = srcMatch ? srcMatch[1] : trimmed;

@@ -36,7 +36,7 @@ export interface PublicBusiness {
     /** Оформление страницы, заданное владельцем в настройках. */
     theme: 'light' | 'dark';
     accentColor: string;
-    /** Безопасный iframe-src Instagram-виджета (SnapWidget/LightWidget) или null. */
+    /** Безопасный iframe-src Instagram-виджета (LightWidget) или null. */
     instagramWidgetUrl: string | null;
     /** Ник студии в Instagram (без @) или null. */
     instagramUsername: string | null;
