@@ -11,7 +11,7 @@ import {
 import { getCurrentUser } from '@/lib/auth';
 import { ARCHIVE_RETENTION_DAYS } from '@/lib/archive';
 import { slugify } from '@/lib/slug';
-import { normalizeInstagramWidgetUrl, normalizeInstagramUsername } from '@/lib/instagram';
+import { normalizeInstagramUsername } from '@/lib/instagram';
 
 export { ARCHIVE_RETENTION_DAYS };
 
@@ -39,8 +39,6 @@ export interface UpdateBusinessInput {
     // Оформление публичной страницы.
     publicTheme?: PublicTheme;
     publicAccentColor?: string;
-    // Embed-код или URL Instagram-виджета (LightWidget); '' очищает.
-    instagramWidgetUrl?: string;
     // Ник студии в Instagram (с @, без, или ссылкой); '' очищает.
     instagramUsername?: string;
 }
@@ -232,22 +230,6 @@ export async function updateBusiness(
             return { ok: false, error: 'Некорректный цвет (нужен #rrggbb)', code: 'INVALID_COLOR' };
         }
         updates.publicAccentColor = color;
-    }
-    if (input.instagramWidgetUrl !== undefined) {
-        const raw = input.instagramWidgetUrl.trim();
-        if (!raw) {
-            updates.instagramWidgetUrl = null;
-        } else {
-            const normalized = normalizeInstagramWidgetUrl(raw);
-            if (!normalized) {
-                return {
-                    ok: false,
-                    error: 'Поддерживается виджет LightWidget — вставьте его код встраивания',
-                    code: 'INVALID_WIDGET',
-                };
-            }
-            updates.instagramWidgetUrl = normalized;
-        }
     }
     if (input.instagramUsername !== undefined) {
         const raw = input.instagramUsername.trim();

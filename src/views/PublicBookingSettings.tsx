@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 import { Button } from '@/ui/button/Button';
-import { TextField, Field, inputClasses } from '@/ui/form';
+import { TextField } from '@/ui/form';
 import { useBusiness } from '@/contexts/BusinessContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { listGalleryAction, removeGalleryPhotoAction } from '@/actions/gallery';
@@ -38,7 +38,6 @@ export default function PublicBookingSettings() {
     const [enabled, setEnabled] = useState(false);
     const [theme, setTheme] = useState<PublicTheme>('light');
     const [accentColor, setAccentColor] = useState('#7c3aed');
-    const [instagramWidget, setInstagramWidget] = useState('');
     const [instagramUsername, setInstagramUsername] = useState('');
     const [saving, setSaving] = useState(false);
     const [photos, setPhotos] = useState<GalleryItem[]>([]);
@@ -51,7 +50,6 @@ export default function PublicBookingSettings() {
         setEnabled(business.publicBookingEnabled);
         setTheme(business.publicTheme === 'dark' ? 'dark' : 'light');
         setAccentColor(business.publicAccentColor);
-        setInstagramWidget(business.instagramWidgetUrl ?? '');
         setInstagramUsername(business.instagramUsername ?? '');
     }, [business]);
 
@@ -121,7 +119,6 @@ export default function PublicBookingSettings() {
                 publicBookingEnabled: enabled,
                 publicTheme: theme,
                 publicAccentColor: accentColor,
-                instagramWidgetUrl: instagramWidget,
                 instagramUsername,
             });
             if (result.success) {
@@ -258,20 +255,6 @@ export default function PublicBookingSettings() {
                     value={instagramUsername}
                     onChange={setInstagramUsername}
                 />
-
-                <Field
-                    label="Сетка постов (необязательно)"
-                    inline
-                    hint="Чтобы показать ленту последних фото: создайте бесплатный виджет на lightwidget.com → вставьте сюда его код встраивания или ссылку. Сетка обновляется автоматически."
-                >
-                    <textarea
-                        value={instagramWidget}
-                        onChange={(e) => setInstagramWidget(e.target.value)}
-                        placeholder="Код виджета LightWidget или ссылка"
-                        rows={2}
-                        className={clsx(inputClasses, 'resize-y font-mono text-xs')}
-                    />
-                </Field>
             </div>
 
             <Button onClick={handleSave} loading={saving}>
