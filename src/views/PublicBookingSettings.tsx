@@ -262,12 +262,12 @@ export default function PublicBookingSettings() {
                 <Field
                     label="Сетка постов (необязательно)"
                     inline
-                    hint="Чтобы показать ленту последних фото: создайте бесплатный виджет на snapwidget.com → вставьте сюда его код, ссылку или ID. Сетка обновляется автоматически."
+                    hint="Чтобы показать ленту последних фото: создайте бесплатный виджет на lightwidget.com → вставьте сюда его код встраивания или ссылку. Сетка обновляется автоматически."
                 >
                     <textarea
                         value={instagramWidget}
                         onChange={(e) => setInstagramWidget(e.target.value)}
-                        placeholder="Код виджета SnapWidget, ссылка или ID"
+                        placeholder="Код виджета LightWidget или ссылка"
                         rows={2}
                         className={clsx(inputClasses, 'resize-y font-mono text-xs')}
                     />

@@ -39,7 +39,7 @@ export interface UpdateBusinessInput {
     // Оформление публичной страницы.
     publicTheme?: PublicTheme;
     publicAccentColor?: string;
-    // Embed-код, URL или ID Instagram-виджета (SnapWidget/LightWidget); '' очищает.
+    // Embed-код или URL Instagram-виджета (LightWidget); '' очищает.
     instagramWidgetUrl?: string;
     // Ник студии в Instagram (с @, без, или ссылкой); '' очищает.
     instagramUsername?: string;
@@ -242,7 +242,7 @@ export async function updateBusiness(
             if (!normalized) {
                 return {
                     ok: false,
-                    error: 'Поддерживаются виджеты SnapWidget или LightWidget — вставьте их код встраивания',
+                    error: 'Поддерживается виджет LightWidget — вставьте его код встраивания',
                     code: 'INVALID_WIDGET',
                 };
             }

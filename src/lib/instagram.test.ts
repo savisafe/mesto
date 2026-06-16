@@ -6,37 +6,36 @@ import {
 } from './instagram';
 
 describe('normalizeInstagramWidgetUrl', () => {
-    it('принимает прямой URL SnapWidget', () => {
-        expect(normalizeInstagramWidgetUrl('https://snapwidget.com/embed/123456')).toBe(
-            'https://snapwidget.com/embed/123456',
-        );
-    });
-
-    it('собирает URL из короткого ID виджета', () => {
-        expect(normalizeInstagramWidgetUrl('987654')).toBe('https://snapwidget.com/embed/987654');
-    });
-
-    it('извлекает src из embed-кода iframe', () => {
-        const embed =
-            '<iframe src="https://snapwidget.com/embed/987" class="snapwidget-widget" frameborder="0" scrolling="no" style="border:none;" width="100%" height="400"></iframe>';
-        expect(normalizeInstagramWidgetUrl(embed)).toBe('https://snapwidget.com/embed/987');
-    });
-
-    it('принимает LightWidget', () => {
+    it('принимает прямой URL LightWidget', () => {
         expect(normalizeInstagramWidgetUrl('https://cdn.lightwidget.com/widgets/abc.html')).toBe(
             'https://cdn.lightwidget.com/widgets/abc.html',
         );
     });
 
+    it('извлекает src из embed-кода iframe LightWidget', () => {
+        const embed =
+            '<iframe src="https://cdn.lightwidget.com/widgets/abc.html" class="lightwidget-widget" scrolling="no" style="border:none;" width="100%" height="400"></iframe>';
+        expect(normalizeInstagramWidgetUrl(embed)).toBe(
+            'https://cdn.lightwidget.com/widgets/abc.html',
+        );
+    });
+
+    it('больше не поддерживает SnapWidget (хост и короткий ID отклоняются)', () => {
+        expect(normalizeInstagramWidgetUrl('https://snapwidget.com/embed/123456')).toBeNull();
+        expect(normalizeInstagramWidgetUrl('987654')).toBeNull();
+    });
+
     it('отбрасывает чужой хост, http и мусор', () => {
         expect(normalizeInstagramWidgetUrl('https://evil.example.com/embed/1')).toBeNull();
-        expect(normalizeInstagramWidgetUrl('http://snapwidget.com/embed/1')).toBeNull();
+        expect(normalizeInstagramWidgetUrl('http://lightwidget.com/widgets/abc.html')).toBeNull();
         expect(normalizeInstagramWidgetUrl('javascript:alert(1)')).toBeNull();
         expect(normalizeInstagramWidgetUrl('')).toBeNull();
     });
 
     it('не пропускает поддельный хост-префикс', () => {
-        expect(normalizeInstagramWidgetUrl('https://snapwidget.com.evil.com/embed/1')).toBeNull();
+        expect(
+            normalizeInstagramWidgetUrl('https://lightwidget.com.evil.com/widgets/abc.html'),
+        ).toBeNull();
     });
 });
 

@@ -263,11 +263,11 @@ describe('updateBusiness', () => {
 
         await loginAs(owner);
         const ok = await updateBusiness(biz.id, {
-            instagramWidgetUrl: '<iframe src="https://snapwidget.com/embed/42"></iframe>',
+            instagramWidgetUrl: '<iframe src="https://cdn.lightwidget.com/widgets/42.html"></iframe>',
         });
         expect(ok.ok).toBe(true);
         if (!ok.ok) return;
-        expect(ok.data.instagramWidgetUrl).toBe('https://snapwidget.com/embed/42');
+        expect(ok.data.instagramWidgetUrl).toBe('https://cdn.lightwidget.com/widgets/42.html');
 
         const cleared = await updateBusiness(biz.id, { instagramWidgetUrl: '' });
         expect(cleared.ok).toBe(true);
