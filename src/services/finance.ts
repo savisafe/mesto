@@ -6,7 +6,7 @@ import timezone from 'dayjs/plugin/timezone';
 import { db } from '@/db';
 import { appointments, businesses, type Appointment } from '@/db/schema';
 import { getCurrentUser } from '@/lib/auth';
-import { checkBusinessAccess } from './_access';
+import { getBusinessRole, isOwnerOrManager } from './_access';
 import { getBusinessTeam } from './availability';
 
 dayjs.extend(utc);
@@ -111,8 +111,9 @@ export async function getFinanceAnalytics(
 ): Promise<ServiceResult<FinanceAnalytics>> {
     const user = await getCurrentUser();
     if (!user) return UNAUTHORIZED;
-    const access = await checkBusinessAccess(input.businessId, user.id);
-    if (!access) return FORBIDDEN;
+    // Финансы видят только владелец и менеджер — не рядовой сотрудник.
+    const role = await getBusinessRole(input.businessId, user.id);
+    if (!role || !isOwnerOrManager(role)) return FORBIDDEN;
 
     const [biz] = await db
         .select({ tz: businesses.timezone })

@@ -108,6 +108,46 @@ describe('getFinanceAnalytics', () => {
         expect(r.code).toBe('FORBIDDEN');
     });
 
+    it('FORBIDDEN для сотрудника (EMPLOYEE): выручка только владельцу/менеджеру', async () => {
+        const owner = await makeUser('o@test.local');
+        const emp = await makeUser('emp@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db.insert(schema.businessMembers).values({
+            businessId: biz.id,
+            userId: emp.id,
+            role: 'EMPLOYEE',
+        });
+        await loginAs(emp);
+        const r = await getFinanceAnalytics({
+            businessId: biz.id,
+            fromDate: '2026-06-01',
+            toDate: '2026-06-30',
+            granularity: 'month',
+        });
+        expect(r.ok).toBe(false);
+        if (r.ok) return;
+        expect(r.code).toBe('FORBIDDEN');
+    });
+
+    it('разрешено менеджеру (MANAGER)', async () => {
+        const owner = await makeUser('o@test.local');
+        const mgr = await makeUser('m@test.local');
+        const biz = await makeBusiness(owner.id);
+        await db.insert(schema.businessMembers).values({
+            businessId: biz.id,
+            userId: mgr.id,
+            role: 'MANAGER',
+        });
+        await loginAs(mgr);
+        const r = await getFinanceAnalytics({
+            businessId: biz.id,
+            fromDate: '2026-06-01',
+            toDate: '2026-06-30',
+            granularity: 'month',
+        });
+        expect(r.ok).toBe(true);
+    });
+
     it('считает выручку только по завершённым записям', async () => {
         const owner = await makeUser('o@test.local');
         const biz = await makeBusiness(owner.id);
