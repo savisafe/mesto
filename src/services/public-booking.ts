@@ -36,8 +36,6 @@ export interface PublicBusiness {
     /** Оформление страницы, заданное владельцем в настройках. */
     theme: 'light' | 'dark';
     accentColor: string;
-    /** Безопасный iframe-src Instagram-виджета (LightWidget) или null. */
-    instagramWidgetUrl: string | null;
     /** Ник студии в Instagram (без @) или null. */
     instagramUsername: string | null;
     services: PublicService[];
@@ -95,7 +93,6 @@ export async function getPublicBusiness(slug: string): Promise<PublicBusiness | 
         slug: biz.slug,
         theme: biz.publicTheme === 'dark' ? 'dark' : 'light',
         accentColor: biz.publicAccentColor,
-        instagramWidgetUrl: biz.instagramWidgetUrl,
         instagramUsername: biz.instagramUsername,
         services: svc,
         team,

@@ -19,9 +19,10 @@ export const businesses = pgTable(
         // Оформление публичной страницы: тема ('light' | 'dark') и акцентный цвет (#rrggbb).
         publicTheme: text('public_theme').notNull().default('light'),
         publicAccentColor: text('public_accent_color').notNull().default('#7c3aed'),
-        // Instagram студии. Виджет LightWidget рисует сетку постов;
-        // ник (без @) — для заголовка-ссылки/кнопки. Оба null = блок не показываем.
-        // Виджет хранит провайдерский iframe-src с allowlist-хоста (см. lib/instagram).
+        // Instagram студии: ник (без @) — для заголовка-ссылки/кнопки на публичной
+        // странице (null = блок не показываем).
+        // instagram_widget_url — устаревшая колонка (фича «Сетка постов» удалена);
+        // приложением не используется, оставлена чтобы не делать миграцию.
         instagramWidgetUrl: text('instagram_widget_url'),
         instagramUsername: text('instagram_username'),
         // IANA-зона бизнеса. Все «локальные» часы графика и слоты резолвятся в ней.

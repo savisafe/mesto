@@ -377,46 +377,31 @@ export const PublicBookingPage = ({ business }: Props) => {
                             </Card>
                         )}
 
-                        {/* Instagram-виджет студии */}
-                        {(business.instagramWidgetUrl || business.instagramUsername) && (
+                        {/* Instagram студии */}
+                        {business.instagramUsername && (
                             <Card ui={ui} title="Instagram">
-                                {business.instagramUsername && (
-                                    <a
-                                        href={`https://instagram.com/${business.instagramUsername}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium"
-                                        style={{ color: accent }}
-                                    >
-                                        <InstagramGlyph />@{business.instagramUsername}
-                                    </a>
-                                )}
-                                {business.instagramWidgetUrl ? (
-                                    <div className="relative aspect-square w-full overflow-hidden rounded-xl">
-                                        <iframe
-                                            src={business.instagramWidgetUrl}
-                                            title="Instagram"
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                            className="absolute inset-0 h-full w-full border-0"
-                                            scrolling="no"
-                                        />
-                                    </div>
-                                ) : (
-                                    <a
-                                        href={`https://instagram.com/${business.instagramUsername}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-                                        style={{
-                                            background:
-                                                'linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)',
-                                        }}
-                                    >
-                                        <InstagramGlyph />
-                                        Открыть Instagram
-                                    </a>
-                                )}
+                                <a
+                                    href={`https://instagram.com/${business.instagramUsername}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium"
+                                    style={{ color: accent }}
+                                >
+                                    <InstagramGlyph />@{business.instagramUsername}
+                                </a>
+                                <a
+                                    href={`https://instagram.com/${business.instagramUsername}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+                                    style={{
+                                        background:
+                                            'linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)',
+                                    }}
+                                >
+                                    <InstagramGlyph />
+                                    Открыть Instagram
+                                </a>
                             </Card>
                         )}
 
