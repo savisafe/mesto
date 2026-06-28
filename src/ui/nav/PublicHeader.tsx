@@ -10,7 +10,7 @@ export const PublicHeader = () => {
     const { user } = useAuth();
 
     return (
-        <header className="relative z-50 w-full border-b border-purple-800 bg-purple-900/30 px-6 py-4">
+        <header className="relative z-50 w-full border-b border-purple-800 bg-purple-950 px-6 py-4">
             <div className="mx-auto flex max-w-7xl items-center justify-between">
                 <Link href="/" aria-label="На главную">
                     <Logo size={36} />
